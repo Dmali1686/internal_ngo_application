@@ -1,0 +1,177 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/services/voice_language_provider.dart';
+import '../../alerts/screens/alerts_screen.dart';
+import '../../profile/screens/profile_screen.dart';
+import '../../tasks/screens/tasks_dashboard_screen.dart';
+
+// Extracted Widgets
+import '../widgets/home_header.dart';
+import '../widgets/stat_cards.dart';
+import '../widgets/modules_grid.dart';
+import '../widgets/recent_admissions.dart';
+import '../widgets/dashboard_bottom_nav.dart';
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowLanguageDialog();
+    });
+  }
+
+  void _checkAndShowLanguageDialog() {
+    final langProvider = context.read<VoiceLanguageProvider>();
+    if (!langProvider.hasSelectedLanguage) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Select Voice Language',
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMain,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Consumer<VoiceLanguageProvider>(
+                  builder: (context, provider, child) {
+                    return Column(
+                      children: VoiceLanguage.values.map((lang) {
+                        final isSelected = provider.language == lang;
+                        return GestureDetector(
+                          onTap: () {
+                            provider.setLanguage(lang);
+                            provider.markLanguageSelected();
+                            Navigator.of(context).pop();
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            margin: EdgeInsets.only(bottom: 12.h),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primaryGreen
+                                  : AppColors.backgroundLightGray,
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primaryGreen
+                                    : Colors.grey.shade300,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              VoiceLanguageProvider.getDisplayName(lang),
+                              style: GoogleFonts.nunitoSans(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textMain,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeTab(),
+          const TasksDashboardScreen(),
+          const AlertsScreen(),
+          const ProfileScreen(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/new-registration'),
+        backgroundColor: const Color(0xFF2E8B57), // Green color matching UI
+        shape: const CircleBorder(),
+        elevation: 2,
+        child: Icon(Icons.add, color: Colors.white, size: 28.w),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: DashboardBottomNav(
+        currentIndex: _currentIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildHomeTab() {
+    return Stack(
+      children: [
+        // Full-screen background image
+        Positioned.fill(
+          child: Image.asset('assets/images/backgound.png', fit: BoxFit.cover),
+        ),
+        // Semi-transparent overlay for readability
+        Positioned.fill(child: Container(color: Colors.white.withOpacity(0))),
+        // Scrollable content
+        SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HomeHeader(
+                onProfileTap: () {
+                  setState(() {
+                    _currentIndex = 3;
+                  });
+                },
+              ),
+              const StatCards(),
+              SizedBox(height: 20.h),
+              const ModulesGrid(),
+              SizedBox(height: 20.h),
+              const RecentAdmissions(),
+              SizedBox(height: 100.h), // Space for bottom nav
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
