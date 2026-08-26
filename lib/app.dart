@@ -10,6 +10,7 @@ import 'features/patient_registration/providers/registration_provider.dart';
 import 'core/services/voice_service.dart';
 import 'core/services/voice_language_provider.dart';
 import 'core/providers/master_data_provider.dart';
+import 'core/providers/dashboard_modules_provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -30,6 +31,9 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => RegistrationProvider()),
             ChangeNotifierProvider(
               create: (_) => MasterDataProvider()..loadMasterData(),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => DashboardModulesProvider()..loadModules(),
             ),
           ],
           child: MaterialApp.router(

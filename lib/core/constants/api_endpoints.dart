@@ -14,6 +14,9 @@ class ApiEndpoints {
   static const String authRefresh = '/auth/refresh';
   static const String authMe = '/auth/me';
 
+  /// GET — list of dashboard modules allowed for the current user's role.
+  static const String myModules = '/auth/me/modules';
+
   // ---------------------------------------------------------------------------
   // Public Auth
   // ---------------------------------------------------------------------------
