@@ -87,6 +87,19 @@ class DashboardModulesProvider extends ChangeNotifier {
       subtitle: 'App settings &\npreferences',
       route: null,
     ),
+    // ── Super Admin only ────────────────────────────────────────────
+    const DashboardModuleModel(
+      key: 'role_management',
+      title: 'Role Mgmt',
+      subtitle: 'Assign roles\nto staff',
+      route: '/role-management',
+    ),
+    const DashboardModuleModel(
+      key: 'admin_analytics',
+      title: 'Analytics',
+      subtitle: 'Tasks &\nperformance',
+      route: '/admin-analytics',
+    ),
   ];
 
   // ---------------------------------------------------------------------------

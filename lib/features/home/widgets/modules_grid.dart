@@ -37,6 +37,8 @@ class ModulesGrid extends StatelessWidget {
     'cleaning': Icons.cleaning_services,
     'tasks': Icons.task_alt,
     'alerts': Icons.notifications_active,
+    'role_management': Icons.admin_panel_settings_rounded,
+    'admin_analytics': Icons.analytics_rounded,
   };
 
   static final Map<String, Color> _colorMap = {
@@ -53,6 +55,8 @@ class ModulesGrid extends StatelessWidget {
     'cleaning': const Color(0xFF06B6D4),
     'tasks': const Color(0xFFF97316),
     'alerts': const Color(0xFFEC4899),
+    'role_management': const Color(0xFF7C3AED),
+    'admin_analytics': const Color(0xFF6366F1),
   };
 
   IconData _resolveIcon(String key) =>

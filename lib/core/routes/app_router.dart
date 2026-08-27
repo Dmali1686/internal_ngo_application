@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/logger.dart';
+import '../../features/admin/screens/role_management_screen.dart';
+import '../../features/admin/screens/admin_analytics_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -289,6 +291,15 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/voice-notes-history',
       builder: (context, state) => const VoiceNotesHistoryScreen(),
+    ),
+    // ── Super Admin routes ──────────────────────────────────────────────────
+    GoRoute(
+      path: '/role-management',
+      builder: (context, state) => const RoleManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-analytics',
+      builder: (context, state) => const AdminAnalyticsScreen(),
     ),
   ],
 );

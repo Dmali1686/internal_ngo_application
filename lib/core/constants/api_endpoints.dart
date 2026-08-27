@@ -18,6 +18,19 @@ class ApiEndpoints {
   static const String myModules = '/auth/me/modules';
 
   // ---------------------------------------------------------------------------
+  // Admin — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// GET — list all employees (optionally filtered by role query param).
+  static const String employees = '/employees';
+
+  /// PATCH — assign / update a role for a specific employee.
+  static String employeeRole(String id) => '/employees/$id/role';
+
+  /// GET — operational analytics (tasks, employee performance, role split).
+  static const String adminAnalytics = '/admin/analytics';
+
+  // ---------------------------------------------------------------------------
   // Public Auth
   // ---------------------------------------------------------------------------
   static const String publicAuthLogin = '/public/auth/login';
