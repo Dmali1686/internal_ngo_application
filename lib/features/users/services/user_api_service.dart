@@ -6,6 +6,8 @@ import '../models/create_user_request.dart';
 import '../models/user_assignment_request.dart';
 import '../models/department_model.dart';
 import '../models/position_model.dart';
+import '../models/access_category_model.dart';
+
 
 /// Service for Super Admin user-management APIs.
 ///
@@ -62,6 +64,28 @@ class UserApiService {
       return ApiResponse.error('Network error: $e');
     }
   }
+
+  /// GET /api/v1/access-categories
+  Future<ApiResponse<List<AccessCategoryModel>>> getAccessCategories() async {
+    AppLogger.info('UserApiService', 'GET /access-categories');
+    try {
+      final response = await _client.get(ApiEndpoints.accessCategories);
+      AppLogger.info('UserApiService', 'getAccessCategories → success: ${response.success}');
+      if (response.success && response.data is List) {
+        final list = (response.data as List)
+            .whereType<Map<String, dynamic>>()
+            .map(AccessCategoryModel.fromJson)
+            .toList();
+        AppLogger.info('UserApiService', 'Loaded ${list.length} access categories');
+        return ApiResponse.ok(list);
+      }
+      return ApiResponse.error(response.errorMessage ?? 'Failed to load access categories');
+    } catch (e) {
+      AppLogger.error('UserApiService', 'getAccessCategories error: $e');
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
 
   // ---------------------------------------------------------------------------
   // Users

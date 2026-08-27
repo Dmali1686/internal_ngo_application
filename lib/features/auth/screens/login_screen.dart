@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/paw_pattern_painter.dart';
 import '../services/auth_api_service.dart';
+import '../../super_admin/providers/super_admin_provider.dart';
 
 /// Premium login screen for MH14 Animal Hospital.
 ///
@@ -170,6 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
     
     if (mounted) {
+      // Set the Super Admin flag based on the role selected at login
+      context.read<SuperAdminProvider>().setRole(_selectedRole);
+
       setState(() {
         _isLoading = false;
       });

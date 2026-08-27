@@ -60,6 +60,10 @@ import '../../features/doctor_panel/screens/doctor_panel_screen.dart';
 import '../../features/doctor_panel/screens/doctor_medical_orders_screen.dart';
 import '../../features/doctor_panel/screens/doctor_food_schedule_screen.dart';
 import '../../features/doctor_panel/screens/doctor_cleaning_schedule_screen.dart';
+import '../../features/super_admin/screens/super_admin_dashboard_screen.dart';
+import '../../features/super_admin/screens/department_detail_screen.dart';
+import '../../features/super_admin/screens/super_admin_employee_profile_screen.dart';
+import '../../features/super_admin/models/super_admin_models.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -292,7 +296,7 @@ final GoRouter appRouter = GoRouter(
       path: '/voice-notes-history',
       builder: (context, state) => const VoiceNotesHistoryScreen(),
     ),
-    // ── Super Admin routes ──────────────────────────────────────────────────
+    // ── Super Admin routes ────────────────────────────────────────────────────
     GoRoute(
       path: '/role-management',
       builder: (context, state) => const RoleManagementScreen(),
@@ -300,6 +304,24 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/admin-analytics',
       builder: (context, state) => const AdminAnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/super-admin-dashboard',
+      builder: (context, state) => const SuperAdminDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/department-detail',
+      builder: (context, state) {
+        final dept = state.extra as DepartmentModel;
+        return DepartmentDetailScreen(department: dept);
+      },
+    ),
+    GoRoute(
+      path: '/super-admin-employee-profile',
+      builder: (context, state) {
+        final employee = state.extra as DepartmentEmployeeModel;
+        return SuperAdminEmployeeProfileScreen(employee: employee);
+      },
     ),
   ],
 );

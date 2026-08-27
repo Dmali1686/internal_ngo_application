@@ -11,6 +11,7 @@ import 'core/services/voice_service.dart';
 import 'core/services/voice_language_provider.dart';
 import 'core/providers/master_data_provider.dart';
 import 'core/providers/dashboard_modules_provider.dart';
+import 'features/super_admin/providers/super_admin_provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -34,6 +35,9 @@ class MyApp extends StatelessWidget {
             ),
             ChangeNotifierProvider(
               create: (_) => DashboardModulesProvider()..loadModules(),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => SuperAdminProvider(),
             ),
           ],
           child: MaterialApp.router(

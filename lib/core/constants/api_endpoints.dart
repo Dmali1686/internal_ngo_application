@@ -29,6 +29,9 @@ class ApiEndpoints {
   /// GET — list all positions (filter by dept via query param).
   static const String positions = '/positions';
 
+  /// GET — list all access categories.
+  static const String accessCategories = '/access-categories';
+
   // ---------------------------------------------------------------------------
   // Users — Super Admin only
   // ---------------------------------------------------------------------------

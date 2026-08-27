@@ -8,6 +8,8 @@ import '../../../core/services/voice_language_provider.dart';
 import '../../alerts/screens/alerts_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../tasks/screens/tasks_dashboard_screen.dart';
+import '../../super_admin/screens/super_admin_dashboard_screen.dart';
+import '../../super_admin/providers/super_admin_provider.dart';
 
 // Extracted Widgets
 import '../widgets/home_header.dart';
@@ -111,6 +113,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSuperAdmin = context.watch<SuperAdminProvider>().isSuperAdmin;
+
+    // ── Super Admin: show dedicated management dashboard ──────────────────
+    if (isSuperAdmin) {
+      return const SuperAdminDashboardScreen();
+    }
+
+    // ── Standard roles: existing layout preserved exactly ─────────────────
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: IndexedStack(

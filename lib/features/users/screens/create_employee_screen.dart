@@ -7,24 +7,11 @@ import '../../../core/utils/logger.dart';
 import '../models/create_user_request.dart';
 import '../models/department_model.dart';
 import '../models/position_model.dart';
+import '../models/access_category_model.dart';
 import '../models/user_assignment_request.dart';
 import '../services/user_api_service.dart';
 
-// ---------------------------------------------------------------------------
-// Access Category UUIDs — seeded constants, no extra API call needed
-// ---------------------------------------------------------------------------
-const _kAccessCategories = [
-  _AccessCat(label: 'Super Admin', id: 'b4fc7beb-8d38-440e-b9e6-88e0e01cd4c6', code: 'SUP001'),
-  _AccessCat(label: 'Dept Admin',  id: '1b8fc8a0-bcfd-4857-9854-1e48285dd4ba', code: 'ADM001'),
-  _AccessCat(label: 'Employee',    id: '2c140a47-c9db-4bbb-b4db-45c87a848467', code: 'EMP001'),
-];
-
-class _AccessCat {
-  final String label;
-  final String id;
-  final String code;
-  const _AccessCat({required this.label, required this.id, required this.code});
-}
+// No hardcoded access categories, fetched from API
 
 /// Super Admin screen to create a new employee.
 ///
@@ -57,10 +44,11 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen>
   List<DepartmentModel> _departments   = [];
   List<PositionModel>   _allPositions  = [];
   List<PositionModel>   _filteredPositions = [];
+  List<AccessCategoryModel> _accessCategories = [];
 
   DepartmentModel?  _selectedDept;
   PositionModel?    _selectedPosition;
-  _AccessCat        _selectedAccess = _kAccessCategories.last; // default: Employee
+  AccessCategoryModel? _selectedAccess;
 
   // ── State ──────────────────────────────────────────────────────────────────
   bool _loadingMeta  = true;
@@ -102,35 +90,30 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen>
   // ---------------------------------------------------------------------------
 
   Future<void> _loadMeta() async {
-    AppLogger.info('CreateEmployeeScreen', 'Loading departments + positions...');
-    setState(() {
-      _loadingMeta = true;
-      _metaError   = null;
-    });
+    try {
+      final deptRes = await _service.getDepartments();
+      final posRes = await _service.getPositions();
+      final accessRes = await _service.getAccessCategories();
 
-    final results = await Future.wait([
-      _service.getDepartments(),
-      _service.getPositions(),
-    ]);
-
-    final deptRes = results[0] as dynamic;
-    final posRes  = results[1] as dynamic;
-
-    if (!mounted) return;
-
-    if (deptRes.success && posRes.success) {
+      if (deptRes.success && posRes.success && accessRes.success) {
+        setState(() {
+          _departments = deptRes.data as List<DepartmentModel>;
+          _allPositions = posRes.data as List<PositionModel>;
+          _accessCategories = accessRes.data as List<AccessCategoryModel>;
+          if (_accessCategories.isNotEmpty) {
+            _selectedAccess = _accessCategories.firstWhere((e) => e.code == 'EMP001', orElse: () => _accessCategories.last);
+          }
+          _loadingMeta = false;
+        });
+      } else {
+        setState(() {
+          _metaError = deptRes.errorMessage ?? posRes.errorMessage ?? accessRes.errorMessage ?? 'Failed to load setup data';
+          _loadingMeta = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _departments  = deptRes.data as List<DepartmentModel>;
-        _allPositions = posRes.data as List<PositionModel>;
-        _loadingMeta  = false;
-      });
-      AppLogger.info('CreateEmployeeScreen',
-          'Meta loaded: ${_departments.length} depts, ${_allPositions.length} positions');
-    } else {
-      final err = deptRes.errorMessage ?? posRes.errorMessage ?? 'Failed to load data';
-      AppLogger.error('CreateEmployeeScreen', 'Meta load error: $err');
-      setState(() {
-        _metaError   = err;
+        _metaError = 'Error: $e';
         _loadingMeta = false;
       });
     }
@@ -167,7 +150,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen>
     );
 
     final assignReq = UserAssignmentRequest(
-      accessCategoryId: _selectedAccess.id,
+      accessCategoryId: _selectedAccess!.id,
       departmentId:     _selectedDept?.id,
       positionId:       _selectedPosition?.id,
       isPrimary:        true,
@@ -545,14 +528,14 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen>
   }
 
   Widget _buildAccessDropdown() {
-    return _buildDropdownRow<_AccessCat>(
+    return _buildDropdownRow<AccessCategoryModel>(
       label: 'Access Role',
       icon: Icons.verified_user_rounded,
       value: _selectedAccess,
       hint: 'Select role',
-      items: _kAccessCategories.map((c) => DropdownMenuItem(
+      items: _accessCategories.map((c) => DropdownMenuItem(
         value: c,
-        child: Text('${c.label} (${c.code})', style: GoogleFonts.nunitoSans(fontSize: 14.sp)),
+        child: Text('${c.name} (${c.code})', style: GoogleFonts.nunitoSans(fontSize: 14.sp)),
       )).toList(),
       onChanged: (c) => setState(() => _selectedAccess = c ?? _selectedAccess),
       validator: null,
