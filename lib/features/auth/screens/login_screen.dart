@@ -132,15 +132,42 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    // ignore: unused_local_variable
-    final authService = _authService; // Keep for future use
     setState(() {
       _isLoading = true;
     });
-    AppLogger.action('LoginScreen', 'Login bypassed for testing UI screens');
+
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text;
+
+    AppLogger.action('LoginScreen', '--- LOGIN ATTEMPT ---');
+    AppLogger.info('LoginScreen', 'Role Selected: $_selectedRole');
+    AppLogger.info('LoginScreen', 'Identifier: $identifier');
+    AppLogger.info('LoginScreen', 'Password: [HIDDEN]');
+
+    // Actually trigger the API request so you can see the network logs in the terminal
+    // and see the request hit the backend.
+    try {
+      AppLogger.action('LoginScreen', 'Sending request to backend...');
+      final response = await _authService.login(
+        identifier: identifier,
+        password: password,
+        role: _selectedRole,
+      );
+      
+      AppLogger.info('LoginScreen', 'Response Success: ${response.success}');
+      if (!response.success) {
+        AppLogger.error('LoginScreen', 'Backend Error Message: ${response.errorMessage}');
+      } else {
+        AppLogger.info('LoginScreen', 'Backend Data: ${response.data}');
+      }
+    } catch (e) {
+      AppLogger.error('LoginScreen', 'Exception during login request: $e');
+    }
+
+    AppLogger.action('LoginScreen', 'Bypassing strict auth lock to allow UI testing...');
     
-    // Simulate loading for UI
-    await Future.delayed(const Duration(seconds: 1));
+    // Simulate a brief delay if the API was too fast
+    await Future.delayed(const Duration(milliseconds: 500));
     
     if (mounted) {
       setState(() {

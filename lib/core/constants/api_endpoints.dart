@@ -10,7 +10,7 @@ class ApiEndpoints {
   // Internal Auth
   // ---------------------------------------------------------------------------
   static const String authSuperAdminLogin = '/auth/superadmin/login';
-  static const String authAdminLogin = '/auth/admin/login'; // Assuming this exists based on dropdown requirement
+  static const String authAdminLogin = '/auth/admin/login';
   static const String authEmployeeLogin = '/auth/employee/login';
   static const String authRegister = '/auth/register';
   static const String authRefresh = '/auth/refresh';
@@ -18,6 +18,26 @@ class ApiEndpoints {
 
   /// GET — list of dashboard modules allowed for the current user's role.
   static const String myModules = '/auth/me/modules';
+
+  // ---------------------------------------------------------------------------
+  // Organization — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// GET — list all departments.
+  static const String departments = '/departments';
+
+  /// GET — list all positions (filter by dept via query param).
+  static const String positions = '/positions';
+
+  // ---------------------------------------------------------------------------
+  // Users — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// POST — create a new user profile.
+  static const String createUser = '/users';
+
+  /// POST — add assignments (department/position/role) to a user.
+  static String userAssignments(String id) => '/users/$id/assignments';
 
   // ---------------------------------------------------------------------------
   // Admin — Super Admin only

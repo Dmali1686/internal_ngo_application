@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/logger.dart';
 import '../models/employee_model.dart';
 import '../services/admin_api_service.dart';
+import '../../users/screens/create_employee_screen.dart';
 
 /// Super Admin — Role Management Screen.
 ///
@@ -225,6 +226,22 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     AppLogger.lifecycle('RoleManagementScreen', 'build');
     return Scaffold(
       backgroundColor: AppColors.backgroundLightGray,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          AppLogger.action('RoleManagementScreen', 'FAB tapped — opening CreateEmployeeScreen');
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CreateEmployeeScreen()),
+          );
+          // Refresh list after returning from create screen
+          AppLogger.info('RoleManagementScreen', 'Returned from CreateEmployeeScreen — refreshing list');
+          _loadEmployees();
+        },
+        backgroundColor: AppColors.primaryGreen,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.person_add_rounded),
+        label: Text('Add Employee', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        elevation: 4,
+      ),
       body: RefreshIndicator(
         color: AppColors.primaryGreen,
         onRefresh: _loadEmployees,
