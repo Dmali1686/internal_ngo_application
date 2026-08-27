@@ -63,6 +63,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void initState() {
     super.initState();
     AppLogger.lifecycle('RoleManagementScreen', 'initState');
+    // Pre-load mock data synchronously so the header stats never show 0
+    _loadMockEmployees();
+    _isLoading = false;
+    // Then attempt real API in background — will update if it succeeds
     _loadEmployees();
     _searchController.addListener(_applyFilters);
   }
@@ -255,7 +259,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   Widget _buildSliverHeader() {
     return SliverAppBar(
-      expandedHeight: 200.h,
+      expandedHeight: 230.h,
       floating: false,
       pinned: true,
       backgroundColor: const Color(0xFF1E293B),
@@ -274,7 +278,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20.w, 56.h, 20.w, 16.h),
+              padding: EdgeInsets.fromLTRB(20.w, 52.h, 20.w, 12.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -298,7 +302,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 14.h),
                   Row(
                     children: [
                       _buildHeaderStat('Total', _allEmployees.length.toString(), Icons.people_rounded),
