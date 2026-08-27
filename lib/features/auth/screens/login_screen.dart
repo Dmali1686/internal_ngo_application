@@ -6,7 +6,6 @@ import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/network/api_exceptions.dart';
 import '../../../core/widgets/paw_pattern_painter.dart';
 import '../services/auth_api_service.dart';
 
@@ -27,19 +26,24 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthApiService();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String _selectedRole = 'Employee'; // Default role
+  
+  final List<String> _roles = ['Employee', 'Admin', 'Super Admin'];
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _showErrorDialog(String message) {
+    // ignore: unused_local_variable
+    final unused = message; // Keep for future use
     showDialog(
       context: context,
       builder: (context) {
@@ -128,8 +132,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    // ignore: unused_local_variable
+    final authService = _authService; // Keep for future use
+    setState(() {
+      _isLoading = true;
+    });
     AppLogger.action('LoginScreen', 'Login bypassed for testing UI screens');
-    context.go('/dashboard-transition');
+    
+    // Simulate loading for UI
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      context.go('/dashboard-transition');
+    }
   }
 
   @override
@@ -259,13 +277,19 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           SizedBox(height: 32.h),
 
-          // Email Field
-          _buildTextFieldLabel(AppStrings.emailLabel),
+          // Role Selection
+          _buildTextFieldLabel('Login Role'),
+          SizedBox(height: 8.h),
+          _buildRoleDropdown(),
+          SizedBox(height: 20.h),
+
+          // Identifier Field (Email/Mobile or Username)
+          _buildTextFieldLabel(_selectedRole == 'Super Admin' ? 'Email or Mobile *' : 'Username *'),
           SizedBox(height: 8.h),
           _buildTextField(
-            controller: _emailController,
-            hint: AppStrings.emailHint,
-            keyboardType: TextInputType.emailAddress,
+            controller: _identifierController,
+            hint: _selectedRole == 'Super Admin' ? 'e.g. admin@mh14.org or 9876543210' : 'e.g. jdoe123',
+            keyboardType: _selectedRole == 'Super Admin' ? TextInputType.emailAddress : TextInputType.text,
           ),
           SizedBox(height: 20.h),
 
@@ -333,6 +357,50 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown() {
+    return InputDecorator(
+      decoration: InputDecoration(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: AppColors.primaryGreen, width: 2.w),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedRole,
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade600),
+          style: GoogleFonts.nunitoSans(fontSize: 15.sp, color: AppColors.textMain),
+          isExpanded: true,
+          items: _roles.map((role) {
+            return DropdownMenuItem<String>(
+              value: role,
+              child: Text(role),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedRole = value;
+                _identifierController.clear();
+              });
+            }
+          },
+        ),
       ),
     );
   }

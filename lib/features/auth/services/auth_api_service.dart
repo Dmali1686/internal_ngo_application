@@ -11,17 +11,33 @@ class AuthApiService {
   final ApiClient _client = ApiClient();
   final AuthStorageService _authStorage = AuthStorageService();
 
-  /// Login an internal user.
-  /// `POST /api/v1/auth/login`
-  ///
-  /// Returns the auth response with access + refresh tokens.
+  /// Login an internal user based on role.
   Future<ApiResponse<dynamic>> login({
-    required String email,
+    required String identifier, // username or email_or_mobile
     required String password,
+    required String role, // 'Employee', 'Admin', 'Super Admin'
   }) async {
+    String endpoint;
+    Map<String, dynamic> body = {'password': password};
+
+    if (role == 'Employee') {
+      endpoint = ApiEndpoints.authEmployeeLogin;
+      body['username'] = identifier;
+    } else if (role == 'Admin') {
+      // Assuming Admin uses a similar endpoint to Super Admin or has its own. 
+      // Falling back to employee login structure or super admin based on standard.
+      // We will map it to authAdminLogin if it exists, otherwise employee.
+      endpoint = ApiEndpoints.authAdminLogin;
+      body['username'] = identifier; // Adjust if backend expects email_or_mobile for Admin
+    } else {
+      // Super Admin
+      endpoint = ApiEndpoints.authSuperAdminLogin;
+      body['email_or_mobile'] = identifier;
+    }
+
     final response = await _client.post(
-      ApiEndpoints.authLogin,
-      body: {'email': email, 'password': password},
+      endpoint,
+      body: body,
     );
 
     // Auto-store tokens on successful login.
@@ -63,7 +79,7 @@ class AuthApiService {
         'email': email,
         'password': password,
         'role': role,
-        ?'phone': phone,
+        if (phone != null) 'phone': phone,
       },
     );
   }
