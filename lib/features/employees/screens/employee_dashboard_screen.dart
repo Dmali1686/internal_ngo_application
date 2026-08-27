@@ -12,19 +12,30 @@ class EmployeeDashboardScreen extends StatefulWidget {
   State<EmployeeDashboardScreen> createState() => _EmployeeDashboardScreenState();
 }
 
-class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
+class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   List<EmployeeModel> _employees = [];
+  late final AnimationController _animController;
 
   @override
   void initState() {
     super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 600));
     _loadMockData();
   }
@@ -37,318 +48,309 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         EmployeeModel(id: '2', name: 'Ravi Desai', email: 'ravi@mh14.org', phone: '9876543211', role: 'nurse', status: 'active'),
         EmployeeModel(id: '3', name: 'Anita Kulkarni', email: 'anita@mh14.org', phone: '9876543212', role: 'caretaker', status: 'inactive'),
         EmployeeModel(id: '4', name: 'Suresh Patil', email: 'suresh@mh14.org', phone: '9876543213', role: 'driver', status: 'active'),
+        EmployeeModel(id: '5', name: 'Meera Joshi', email: 'meera@mh14.org', phone: '9876543214', role: 'nurse', status: 'active'),
       ];
       _isLoading = false;
     });
+    _animController.forward();
   }
+
+  // Role → accent color
+  static const Map<String, Color> _roleColors = {
+    'doctor': Color(0xFF6366F1),
+    'nurse': Color(0xFFEC4899),
+    'caretaker': Color(0xFF14B8A6),
+    'driver': Color(0xFFF97316),
+    'receptionist': Color(0xFF8B5CF6),
+  };
+
+  static const Map<String, IconData> _roleIcons = {
+    'doctor': Icons.medical_information_rounded,
+    'nurse': Icons.local_hospital_rounded,
+    'caretaker': Icons.pets_rounded,
+    'driver': Icons.directions_car_rounded,
+    'receptionist': Icons.record_voice_over_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final activeCount = _employees.where((e) => e.isActive).length;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text('Employee Dashboard', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black87, fontSize: 18.sp)),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20.w),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: EdgeInsets.only(right: 16.w),
-            child: CircleAvatar(
-              radius: 16.r,
-              backgroundImage: const NetworkImage(
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuD4X8v89VRtlb3VS5i1TxxwRn1QLNGK4jGkTgrcDF5VnK3Z5Jw_maTE0-r621TXfOlmYNQqnM02Ds6NUstjD6NrFx8W8dwT3oIZbMbgawE0IBR0ILnHOytlRGoRgJ0L37HUIblDfldgEDKlzqz-AZ97PdDHTHXLNEZjRXnv_pfka5dMAOkg_jcYtPyyJgtpQeLj3h3nqS_msnJlOS94WvSEIM5rzv0CvtbbABgkfIsrKmTum6JtcCia3g',
-              ),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.backgroundLightGray,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen))
           : RefreshIndicator(
               onRefresh: _fetchData,
               color: AppColors.primaryGreen,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(16.w),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSummaryCards(),
-                    SizedBox(height: 24.h),
-                    Text(
-                      'Quick Actions',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textMain,
-                      ),
+              child: CustomScrollView(
+                slivers: [
+                  _buildSliverHeader(activeCount),
+                  SliverToBoxAdapter(child: _buildQuickActions()),
+                  SliverToBoxAdapter(child: _buildSectionTitle('Recent Staff', showViewAll: true, onViewAll: () => context.push('/employee-list'))),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _buildStaffCard(_employees[index]),
+                      childCount: _employees.take(4).length,
                     ),
-                    SizedBox(height: 16.h),
-                    _buildQuickActions(context),
-                    SizedBox(height: 24.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Recent Staff',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textMain,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => context.push('/employee-list'),
-                          child: Text('View All', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.w700, color: AppColors.primaryGreen)),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildRecentStaff(),
-                  ],
-                ),
+                  ),
+                  SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                ],
               ),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         backgroundColor: AppColors.primaryGreen,
-        child: const Icon(Icons.add, color: Colors.white),
+        elevation: 4,
+        child: Icon(Icons.person_add_rounded, color: Colors.white, size: 24.w),
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
-    final activeCount = _employees.where((e) => e.isActive).length;
+  // ── Gradient Sliver Header ────────────────────────────────────────────────
+
+  Widget _buildSliverHeader(int activeCount) {
     final totalCount = _employees.length;
+    final inactiveCount = totalCount - activeCount;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSummaryCard(
-            'Total Staff',
-            totalCount.toString(),
-            Icons.people_alt,
-            AppColors.primaryGreen.withValues(alpha: 0.1),
-            AppColors.primaryGreen,
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: _buildSummaryCard(
-            'On Duty',
-            activeCount.toString(),
-            Icons.check_circle,
-            Colors.blue[50]!,
-            Colors.blue[700]!,
-          ),
-        ),
+    return SliverAppBar(
+      expandedHeight: 220.h,
+      pinned: true,
+      floating: false,
+      backgroundColor: const Color(0xFF1E293B),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20.w),
+        onPressed: () => context.pop(),
+      ),
+      title: Text('Employee Dashboard', style: GoogleFonts.poppins(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.white)),
+      actions: [
+        IconButton(icon: Icon(Icons.notifications_outlined, color: Colors.white, size: 22.w), onPressed: () {}),
+        SizedBox(width: 8.w),
       ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E293B), Color(0xFF14B8A6)],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 64.h, 20.w, 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('Staff Overview', style: GoogleFonts.nunitoSans(fontSize: 13.sp, color: Colors.white.withValues(alpha: 0.7))),
+                  SizedBox(height: 12.h),
+                  Row(
+                    children: [
+                      Expanded(child: _buildStatChip('Total', totalCount.toString(), Icons.people_rounded, Colors.white)),
+                      SizedBox(width: 10.w),
+                      Expanded(child: _buildStatChip('Active', activeCount.toString(), Icons.check_circle_rounded, const Color(0xFF34A853))),
+                      SizedBox(width: 10.w),
+                      Expanded(child: _buildStatChip('Inactive', inactiveCount.toString(), Icons.cancel_rounded, Colors.red.shade300)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildSummaryCard(
-    String title,
-    String count,
-    IconData icon,
-    Color bgColor,
-    Color iconColor,
-  ) {
+  Widget _buildStatChip(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 8.w),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16.r),
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 18.w),
+          SizedBox(height: 4.h),
+          Text(value, style: GoogleFonts.poppins(fontSize: 20.sp, fontWeight: FontWeight.w800, color: Colors.white)),
+          Text(label, style: GoogleFonts.nunitoSans(fontSize: 10.sp, color: Colors.white.withValues(alpha: 0.7))),
+        ],
+      ),
+    );
+  }
+
+  // ── Quick Actions ─────────────────────────────────────────────────────────
+
+  Widget _buildQuickActions() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 4.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 28.w),
-          SizedBox(height: 12.h),
-          Text(
-            count,
-            style: GoogleFonts.poppins(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: iconColor,
-            ),
+          _buildSectionTitleInline('Quick Actions'),
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              Expanded(child: _buildActionCard('Staff List', Icons.format_list_bulleted_rounded, const Color(0xFF1E293B), const Color(0xFF0F766E), '/employee-list')),
+              SizedBox(width: 10.w),
+              Expanded(child: _buildActionCard('Attendance', Icons.fingerprint_rounded, const Color(0xFF6366F1), const Color(0xFF4338CA), '/attendance')),
+            ],
           ),
-          Text(
-            title,
-            style: GoogleFonts.nunitoSans(fontSize: 14.sp, color: Colors.black87, fontWeight: FontWeight.w600),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              Expanded(child: _buildActionCard('Tasks', Icons.task_alt_rounded, const Color(0xFFF97316), const Color(0xFFEA580C), '/assigned-tasks')),
+              SizedBox(width: 10.w),
+              Expanded(child: _buildActionCard('Performance', Icons.trending_up_rounded, const Color(0xFFEC4899), const Color(0xFFDB2777), '/performance')),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12.w,
-      mainAxisSpacing: 12.h,
-      childAspectRatio: 2.5,
-      children: [
-        _buildActionBtn(
-          context,
-          'Staff List',
-          Icons.format_list_bulleted,
-          AppColors.primaryGreen,
-          Colors.white,
-          '/employee-list',
-        ),
-        _buildActionBtn(
-          context,
-          'Attendance',
-          Icons.co_present,
-          Colors.white,
-          Colors.black87,
-          '/attendance',
-        ),
-        _buildActionBtn(
-          context,
-          'Tasks',
-          Icons.task_alt,
-          Colors.white,
-          Colors.black87,
-          '/assigned-tasks',
-        ),
-        _buildActionBtn(
-          context,
-          'Performance',
-          Icons.trending_up,
-          Colors.white,
-          Colors.black87,
-          '/performance',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionBtn(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color bgColor,
-    Color textColor,
-    String route,
-  ) {
-    return InkWell(
+  Widget _buildActionCard(String title, IconData icon, Color from, Color to, String route) {
+    return GestureDetector(
       onTap: () => context.push(route),
-      borderRadius: BorderRadius.circular(12.r),
       child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 14.w),
         decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12.r),
-          border: bgColor == Colors.white
-              ? Border.all(color: Colors.grey[300]!)
-              : null,
-          boxShadow: bgColor == Colors.white
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))]
-              : null,
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [from, to]),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(color: from.withValues(alpha: 0.35), blurRadius: 10, offset: Offset(0, 4.h)),
+          ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: textColor, size: 20.w),
-            SizedBox(width: 8.w),
-            Text(
-              title,
-              style: GoogleFonts.nunitoSans(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 14.sp,
-              ),
-            ),
+            Icon(icon, color: Colors.white, size: 22.w),
+            SizedBox(width: 10.w),
+            Text(title, style: GoogleFonts.poppins(fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.white)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentStaff() {
-    if (_employees.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Text(
-            'No staff found.',
-            style: GoogleFonts.nunitoSans(color: Colors.grey[600]),
-          ),
-        ),
-      );
-    }
+  // ── Section Title ─────────────────────────────────────────────────────────
 
-    return Column(
-      children: _employees.take(5).map((employee) {
-        final isActive = employee.isActive;
-        final statusColor = isActive ? AppColors.primaryGreen : Colors.red;
-
-        return Card(
-          elevation: 0,
-          margin: EdgeInsets.only(bottom: 12.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r),
-            side: BorderSide(color: Colors.grey[200]!),
-          ),
-          child: ListTile(
-            onTap: () => context.push('/employee-profile', extra: employee),
-            contentPadding: EdgeInsets.all(12.w),
-            leading: CircleAvatar(
-              radius: 24.r,
-              backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
-              child: Text(
-                employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
-                style: GoogleFonts.poppins(color: AppColors.primaryGreen, fontWeight: FontWeight.bold),
-              ),
+  Widget _buildSectionTitle(String title, {bool showViewAll = false, VoidCallback? onViewAll}) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 8.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: GoogleFonts.poppins(fontSize: 18.sp, fontWeight: FontWeight.w700, color: AppColors.textMain)),
+          if (showViewAll)
+            GestureDetector(
+              onTap: onViewAll,
+              child: Text('View All', style: GoogleFonts.nunitoSans(fontSize: 13.sp, fontWeight: FontWeight.w700, color: AppColors.primaryGreen)),
             ),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitleInline(String title) {
+    return Text(title, style: GoogleFonts.poppins(fontSize: 17.sp, fontWeight: FontWeight.w700, color: AppColors.textMain));
+  }
+
+  // ── Staff Card ────────────────────────────────────────────────────────────
+
+  Widget _buildStaffCard(EmployeeModel employee) {
+    final isActive = employee.isActive;
+    final statusColor = isActive ? AppColors.primaryGreen : Colors.red;
+    final roleColor = _roleColors[employee.role] ?? AppColors.primaryGreen;
+    final roleIcon = _roleIcons[employee.role] ?? Icons.person_rounded;
+    final initials = employee.name.trim().split(' ').map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').take(2).join();
+
+    return GestureDetector(
+      onTap: () => context.push('/employee-profile', extra: employee),
+      child: Container(
+        margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 10.h),
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: Offset(0, 3.h))],
+        ),
+        child: Row(
+          children: [
+            // Avatar with gradient
+            Stack(
               children: [
-                Expanded(
-                  child: Text(
-                    employee.name,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15.sp, color: AppColors.textMain),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  width: 50.w,
+                  height: 50.w,
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    isActive ? 'Active' : 'Inactive',
-                    style: GoogleFonts.nunitoSans(
-                      color: statusColor,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold,
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [roleColor.withValues(alpha: 0.8), roleColor],
                     ),
+                  ),
+                  child: Center(child: Text(initials, style: GoogleFonts.poppins(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white))),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 16.w,
+                    height: 16.w,
+                    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)),
+                    child: Icon(roleIcon, size: 10.w, color: roleColor),
                   ),
                 ),
               ],
             ),
-            subtitle: Padding(
-              padding: EdgeInsets.only(top: 4.h),
-              child: Text(
-                '${employee.roleLabel} • ${employee.phone}',
-                style: GoogleFonts.nunitoSans(fontSize: 13.sp, color: AppColors.textMuted),
+            SizedBox(width: 14.w),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(employee.name, style: GoogleFonts.poppins(fontSize: 14.sp, fontWeight: FontWeight.w700, color: AppColors.textMain), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  SizedBox(height: 3.h),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+                        decoration: BoxDecoration(color: roleColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6.r)),
+                        child: Text(employee.roleLabel, style: GoogleFonts.nunitoSans(fontSize: 10.sp, fontWeight: FontWeight.w700, color: roleColor)),
+                      ),
+                      SizedBox(width: 6.w),
+                      Icon(Icons.phone_rounded, size: 11.w, color: AppColors.textMuted),
+                      SizedBox(width: 3.w),
+                      Text(employee.phone, style: GoogleFonts.nunitoSans(fontSize: 10.sp, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      }).toList(),
+            // Status dot + chevron
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20.r)),
+                  child: Text(
+                    isActive ? 'Active' : 'Inactive',
+                    style: GoogleFonts.nunitoSans(fontSize: 10.sp, fontWeight: FontWeight.w700, color: statusColor),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 18.w),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
