@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_error_handler.dart';
 import '../models/user_creation_models.dart';
 import '../services/user_api_service.dart';
 
@@ -64,12 +65,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingData = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load dropdown data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showError(context, e);
       }
     }
   }
@@ -135,29 +131,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
         }
       } catch (e) {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: 28.sp),
-                  SizedBox(width: 8.w),
-                  Text('Error', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.red)),
-                ],
-              ),
-              content: Text(
-                e.toString().replaceAll('Exception: ', '').replaceAll('ApiException(400): ', ''),
-                style: GoogleFonts.nunitoSans(fontSize: 15.sp, color: AppColors.textMain),
-              ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text('OK', style: GoogleFonts.poppins(color: AppColors.primaryGreen, fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-          );
+          AppErrorHandler.showErrorDialog(context, e);
         }
       } finally {
         if (mounted) {

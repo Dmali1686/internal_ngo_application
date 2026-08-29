@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_error_handler.dart';
 import '../../../core/utils/logger.dart';
 import '../models/create_user_request.dart';
 import '../models/department_model.dart';
@@ -180,32 +181,13 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen>
       Navigator.of(context).pop();
     } else {
       AppLogger.error('CreateEmployeeScreen', 'Failed: ${result.errorMessage}');
-      _showErrorDialog(result.errorMessage ?? 'Something went wrong');
+      AppErrorHandler.showErrorDialog(
+        context,
+        result.errorMessage ?? 'Something went wrong',
+      );
     }
   }
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-        title: Row(
-          children: [
-            Icon(Icons.error_rounded, color: Colors.red.shade400, size: 24.w),
-            SizedBox(width: 8.w),
-            Text('Error', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18.sp)),
-          ],
-        ),
-        content: Text(message, style: GoogleFonts.nunitoSans(fontSize: 14.sp)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: GoogleFonts.nunitoSans(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // Build
