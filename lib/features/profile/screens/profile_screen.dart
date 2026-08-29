@@ -272,12 +272,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ],
                         ),
                         SizedBox(height: 10.h),
-                        Row(
+                        Wrap(
+                          spacing: 8.w,
+                          runSpacing: 6.h,
                           children: [
                             _headerPill(_empId, Icons.badge_outlined, solid: true),
-                            SizedBox(width: 8.w),
                             _headerPill(_userType, Icons.medical_services_outlined),
-                            SizedBox(width: 8.w),
                             _headerPill('Active', Icons.circle,
                                 iconColor: const Color(0xFF4ADE80)),
                           ],
