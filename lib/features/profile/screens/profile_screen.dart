@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String get _empId =>
       _isLoading
           ? 'EMP-...'
-          : 'EMP-${_profileData?['id']?.toString().split('_').last ?? '0000'}';
+          : (_profileData?['employee_code'] ?? 'EMP-${_profileData?['id']?.toString().split('-').first ?? '0000'}');
 
   @override
   Widget build(BuildContext context) {
@@ -303,24 +303,30 @@ class _ProfileScreenState extends State<ProfileScreen>
         borderRadius: BorderRadius.circular(20.r),
         border: solid ? null : Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 12.sp,
-            color: solid ? _darkGreen : (iconColor ?? Colors.white),
-          ),
-          SizedBox(width: 5.w),
-          Text(
-            label,
-            style: GoogleFonts.nunitoSans(
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w700,
-              color: solid ? _darkGreen : Colors.white,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 200.w),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 12.sp,
+              color: solid ? _darkGreen : (iconColor ?? Colors.white),
             ),
-          ),
-        ],
+            SizedBox(width: 5.w),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.nunitoSans(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
+                  color: solid ? _darkGreen : Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
