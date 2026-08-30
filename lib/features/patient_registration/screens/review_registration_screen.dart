@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/registration_provider.dart';
+import '../models/patient_registration_model.dart';
+import '../services/patient_api_service.dart';
 
 class ReviewRegistrationScreen extends StatelessWidget {
   const ReviewRegistrationScreen({super.key});

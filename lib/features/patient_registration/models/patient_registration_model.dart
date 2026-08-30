@@ -80,60 +80,269 @@ class PatientRegistrationModel {
 }
 
 class PatientRegistrationRequest {
-  final int animalTypeId;
-  final String? rescueTripId;
-  final int? breedId;
-  final int? colorId;
-  final String? animalName;
   final String? age;
-  final double? weight;
-  final String? gender;
-  final String? reporterName;
-  final String? reporterMobile;
-  final String? reporterType;
-  final String? address;
+  final String? animalAddress;
+  final String? animalName;
+  final String? animalType;
+  final String? cageNumber;
+  final String? color;
+  final String? diagnosis;
+  final String? gender; // "MALE" or "FEMALE"
+  final bool? isSterilized;
   final String? landmark;
-  final String? description;
-  final String? transportType;
-  final String? rescuePriority;
+  final String? reporterMobile;
+  final String? reporterName;
+  final String? symptoms;
+  final String? tests;
+  final String? transportedBy;
+  final String? transporterContact;
+  final double? weight;
 
   PatientRegistrationRequest({
-    required this.animalTypeId,
-    this.rescueTripId,
-    this.breedId,
-    this.colorId,
-    this.animalName,
     this.age,
-    this.weight,
+    this.animalAddress,
+    this.animalName,
+    this.animalType,
+    this.cageNumber,
+    this.color,
+    this.diagnosis,
     this.gender,
-    this.reporterName,
-    this.reporterMobile,
-    this.reporterType,
-    this.address,
+    this.isSterilized,
     this.landmark,
-    this.description,
-    this.transportType,
-    this.rescuePriority,
+    this.reporterMobile,
+    this.reporterName,
+    this.symptoms,
+    this.tests,
+    this.transportedBy,
+    this.transporterContact,
+    this.weight,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'animal_type_id': animalTypeId,
-      if (rescueTripId != null) 'rescue_trip_id': rescueTripId,
-      if (breedId != null) 'breed_id': breedId,
-      if (colorId != null) 'color_id': colorId,
-      if (animalName != null) 'animal_name': animalName,
       if (age != null) 'age': age,
-      if (weight != null) 'weight': weight,
+      if (animalAddress != null) 'animal_address': animalAddress,
+      if (animalName != null) 'animal_name': animalName,
+      if (animalType != null) 'animal_type': animalType,
+      if (cageNumber != null) 'cage_number': cageNumber,
+      if (color != null) 'color': color,
+      if (diagnosis != null) 'diagnosis': diagnosis,
       if (gender != null) 'gender': gender,
-      if (reporterName != null) 'reporter_name': reporterName,
-      if (reporterMobile != null) 'reporter_mobile': reporterMobile,
-      if (reporterType != null) 'reporter_type': reporterType,
-      if (address != null) 'address': address,
+      if (isSterilized != null) 'is_sterilized': isSterilized,
       if (landmark != null) 'landmark': landmark,
-      if (description != null) 'description': description,
-      if (transportType != null) 'transport_type': transportType,
-      if (rescuePriority != null) 'rescue_priority': rescuePriority,
+      if (reporterMobile != null) 'reporter_mobile': reporterMobile,
+      if (reporterName != null) 'reporter_name': reporterName,
+      if (symptoms != null) 'symptoms': symptoms,
+      if (tests != null) 'tests': tests,
+      if (transportedBy != null) 'transported_by': transportedBy,
+      if (transporterContact != null) 'transporter_contact': transporterContact,
+      if (weight != null) 'weight': weight,
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Patient response model — maps GET /api/v1/patients and GET /patients/{id}
+// ---------------------------------------------------------------------------
+
+class PatientModel {
+  final String id;
+  final String caseId;
+  final String? cageNumber;
+  final String? admissionDate;
+  final String? reporterName;
+  final String? reporterMobile;
+  final String? animalAddress;
+  final String? landmark;
+  final String? animalName;
+  final String animalType;
+  final String? color;
+  final String? gender;
+  final String? age;
+  final double? weight;
+  final bool? isSterilized;
+  final String? transportedBy;
+  final String? transporterContact;
+  final String? symptoms;
+  final String? tests;
+  final String? diagnosis;
+  final String status;
+  final String? qrPayload;
+
+  PatientModel({
+    required this.id,
+    required this.caseId,
+    this.cageNumber,
+    this.admissionDate,
+    this.reporterName,
+    this.reporterMobile,
+    this.animalAddress,
+    this.landmark,
+    this.animalName,
+    required this.animalType,
+    this.color,
+    this.gender,
+    this.age,
+    this.weight,
+    this.isSterilized,
+    this.transportedBy,
+    this.transporterContact,
+    this.symptoms,
+    this.tests,
+    this.diagnosis,
+    required this.status,
+    this.qrPayload,
+  });
+
+  factory PatientModel.fromJson(Map<String, dynamic> json) {
+    return PatientModel(
+      id: json['id']?.toString() ?? '',
+      caseId: json['case_id']?.toString() ?? '',
+      cageNumber: json['cage_number']?.toString(),
+      admissionDate: json['admission_date']?.toString(),
+      reporterName: json['reporter_name']?.toString(),
+      reporterMobile: json['reporter_mobile']?.toString(),
+      animalAddress: json['animal_address']?.toString(),
+      landmark: json['landmark']?.toString(),
+      animalName: json['animal_name']?.toString(),
+      animalType: json['animal_type']?.toString() ?? '',
+      color: json['color']?.toString(),
+      gender: json['gender']?.toString(),
+      age: json['age']?.toString(),
+      weight: (json['weight'] as num?)?.toDouble(),
+      isSterilized: json['is_sterilized'] as bool?,
+      transportedBy: json['transported_by']?.toString(),
+      transporterContact: json['transporter_contact']?.toString(),
+      symptoms: json['symptoms']?.toString(),
+      tests: json['tests']?.toString(),
+      diagnosis: json['diagnosis']?.toString(),
+      status: json['status']?.toString() ?? 'ADMITTED',
+      qrPayload: json['qr_payload']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'case_id': caseId,
+    'cage_number': cageNumber,
+    'admission_date': admissionDate,
+    'reporter_name': reporterName,
+    'reporter_mobile': reporterMobile,
+    'animal_address': animalAddress,
+    'landmark': landmark,
+    'animal_name': animalName,
+    'animal_type': animalType,
+    'color': color,
+    'gender': gender,
+    'age': age,
+    'weight': weight,
+    'is_sterilized': isSterilized,
+    'transported_by': transportedBy,
+    'transporter_contact': transporterContact,
+    'symptoms': symptoms,
+    'tests': tests,
+    'diagnosis': diagnosis,
+    'status': status,
+    'qr_payload': qrPayload,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Medicine model
+// ---------------------------------------------------------------------------
+
+class MedicineModel {
+  final String? id;
+  final String medicineName;
+  final String dosage;
+  final String frequency;
+  final String duration;
+  final String? createdAt;
+
+  MedicineModel({
+    this.id,
+    required this.medicineName,
+    required this.dosage,
+    required this.frequency,
+    required this.duration,
+    this.createdAt,
+  });
+
+  factory MedicineModel.fromJson(Map<String, dynamic> json) {
+    return MedicineModel(
+      id: json['id']?.toString(),
+      medicineName: json['medicine_name']?.toString() ?? '',
+      dosage: json['dosage']?.toString() ?? '',
+      frequency: json['frequency']?.toString() ?? '',
+      duration: json['duration']?.toString() ?? '',
+      createdAt: json['created_at']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'medicine_name': medicineName,
+    'dosage': dosage,
+    'frequency': frequency,
+    'duration': duration,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Treatment model
+// ---------------------------------------------------------------------------
+
+class TreatmentModel {
+  final String? id;
+  final String? patientId;
+  final String? treatmentDate;
+  final String diagnosis;
+  final String? doctorId;
+  final List<MedicineModel> medicines;
+
+  TreatmentModel({
+    this.id,
+    this.patientId,
+    this.treatmentDate,
+    required this.diagnosis,
+    this.doctorId,
+    this.medicines = const [],
+  });
+
+  factory TreatmentModel.fromJson(Map<String, dynamic> json) {
+    final medicinesList = (json['medicines'] as List<dynamic>? ?? [])
+        .map((m) => MedicineModel.fromJson(m as Map<String, dynamic>))
+        .toList();
+    return TreatmentModel(
+      id: json['id']?.toString(),
+      patientId: json['patient_id']?.toString(),
+      treatmentDate: json['treatment_date']?.toString(),
+      diagnosis: json['diagnosis']?.toString() ?? '',
+      doctorId: json['doctor_id']?.toString(),
+      medicines: medicinesList,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add Treatment request
+// ---------------------------------------------------------------------------
+
+class AddTreatmentRequest {
+  final String diagnosis;
+  final String? doctorId;
+  final List<MedicineModel> medicines;
+
+  AddTreatmentRequest({
+    required this.diagnosis,
+    this.doctorId,
+    this.medicines = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+    'diagnosis': diagnosis,
+    if (doctorId != null) 'doctor_id': doctorId,
+    if (medicines.isNotEmpty)
+      'medicines': medicines.map((m) => m.toJson()).toList(),
+  };
+}
+

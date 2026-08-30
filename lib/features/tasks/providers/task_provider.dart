@@ -35,9 +35,15 @@ class TaskProvider extends ChangeNotifier {
   Future<void> fetchMyTasks({String? departmentId}) async {
     _setLoading(true);
     _setError(null);
+    AppLogger.info('TaskProvider', 'fetchMyTasks → starting fetch (departmentId=$departmentId)');
     try {
       _myTasks = await _apiService.getMyTasks(departmentId: departmentId);
+      AppLogger.info('TaskProvider', 'fetchMyTasks ← stored ${_myTasks.length} tasks in _myTasks');
+      for (final t in _myTasks) {
+        AppLogger.info('TaskProvider', '  task: id=${t.id}, title="${t.title}", status=${t.status}, priority=${t.priority}');
+      }
     } catch (e) {
+      AppLogger.error('TaskProvider', 'fetchMyTasks ← error: $e');
       _setError(e.toString());
     } finally {
       _setLoading(false);
@@ -155,13 +161,19 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> _refreshAfterUpdate() async {
-    // Refresh all to keep state synced without complex logic
+    // Refresh myTasks and assignedTasks for all roles.
+    // getAllTasks() is SUP001-only — skip it here to avoid 403 for employees.
     try {
       _myTasks = await _apiService.getMyTasks();
-      _assignedTasks = await _apiService.getAssignedTasks();
-      _allTasks = await _apiService.getAllTasks();
+      notifyListeners();
     } catch (e) {
-      AppLogger.error('TaskProvider', 'Failed to refresh lists after update: $e');
+      AppLogger.error('TaskProvider', 'Failed to refresh myTasks after update: $e');
+    }
+    try {
+      _assignedTasks = await _apiService.getAssignedTasks();
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('TaskProvider', 'Failed to refresh assignedTasks after update: $e');
     }
   }
 }

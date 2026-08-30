@@ -6,10 +6,23 @@ import '../../providers/registration_provider.dart';
 import '../../services/registration_voice_assistant.dart';
 import '../../../../core/services/voice_service.dart';
 import '../../../../core/services/voice_language_provider.dart';
-import '../../../../core/providers/master_data_provider.dart';
+
 
 class Step3AnimalDetails extends StatelessWidget {
   const Step3AnimalDetails({super.key});
+
+  static const List<String> _animalTypes = [
+    'Dog',
+    'Cat',
+    'Bird',
+    'Cow',
+    'Buffalo',
+    'Horse',
+    'Donkey',
+    'Monkey',
+    'Snake',
+    'Other',
+  ];
 
   final List<String> _observations = const [
     'Conscious',
@@ -162,7 +175,6 @@ class Step3AnimalDetails extends StatelessWidget {
   Widget _buildBasicInformation(BuildContext context) {
     final formProvider = context.watch<RegistrationProvider>();
     final voiceService = context.watch<VoiceService>();
-    final masterProvider = context.watch<MasterDataProvider>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,8 +233,8 @@ class Step3AnimalDetails extends StatelessWidget {
         Wrap(
           spacing: 8.w,
           runSpacing: 8.h,
-          children: masterProvider.animalTypes
-              .map((typeData) => _buildTypeChip(typeData, formProvider))
+          children: _animalTypes
+              .map((typeName) => _buildTypeChip(typeName, formProvider))
               .toList(),
         ),
         SizedBox(height: 16.h),
@@ -234,85 +246,22 @@ class Step3AnimalDetails extends StatelessWidget {
           ),
         ),
         SizedBox(height: 8.h),
-        DropdownMenu<int>(
-          initialSelection: formProvider.breedId,
-          controller: formProvider.breedController,
-          width:
-              MediaQuery.of(context).size.width -
-              40.w, // Match screen width minus padding
-          hintText: 'Search breed...',
-          textStyle: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: const Color(0xFF1B1C1C),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFFBF9F9),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.w,
-              vertical: 14.h,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          onSelected: (int? value) {
-            formProvider.updateBreedId(value);
-          },
-          dropdownMenuEntries: masterProvider.breeds.map((breed) {
-            return DropdownMenuEntry<int>(
-              value: breed['id'],
-              label: breed['name'] ?? 'Unknown',
-            );
-          }).toList(),
+        _buildTextField(
+          'Breed / Mix',
+          'e.g. Labrador, Persian, Mixed',
+          formProvider.breedController,
+          focusNode: formProvider.breedFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'breed',
         ),
         SizedBox(height: 16.h),
-        Text(
+        _buildTextField(
           'Color',
-          style: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        SizedBox(height: 8.h),
-        DropdownMenu<int>(
-          initialSelection: formProvider.colorId,
-          width: MediaQuery.of(context).size.width - 40.w,
-          hintText: 'Search color...',
-          textStyle: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: const Color(0xFF1B1C1C),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFFBF9F9),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.w,
-              vertical: 14.h,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          onSelected: (int? value) {
-            formProvider.updateColorId(value);
-          },
-          dropdownMenuEntries: masterProvider.colors.map((color) {
-            return DropdownMenuEntry<int>(
-              value: color['id'],
-              label: color['name'] ?? 'Unknown',
-            );
-          }).toList(),
+          'e.g. Brown, Black, White, Mixed',
+          formProvider.colorController,
+          focusNode: formProvider.colorFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'color',
         ),
         SizedBox(height: 16.h),
         Text(
@@ -414,16 +363,13 @@ class Step3AnimalDetails extends StatelessWidget {
   }
 
   Widget _buildTypeChip(
-    Map<String, dynamic> typeData,
+    String typeName,
     RegistrationProvider formProvider,
   ) {
-    String typeName = typeData['name'] ?? 'Unknown';
-    int typeId = typeData['id'] ?? 0;
-    bool isSelected = formProvider.animalTypeId == typeId;
+    bool isSelected = formProvider.animalType == typeName;
     return GestureDetector(
       onTap: () {
         formProvider.updateAnimalType(typeName);
-        formProvider.updateAnimalTypeId(typeId);
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),

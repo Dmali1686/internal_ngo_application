@@ -127,7 +127,7 @@ class ApiClient {
     // Attach Bearer token if available.
     final token = AuthStorageService().accessToken;
     if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
+      headers['Authorization'] = token;
     }
 
     if (extraHeaders != null) {

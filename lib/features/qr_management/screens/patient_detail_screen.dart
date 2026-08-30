@@ -3,9 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_storage_service.dart';
 
 class PatientDetailScreen extends StatefulWidget {
-  const PatientDetailScreen({super.key});
+  final Map<String, dynamic> patient;
+  const PatientDetailScreen({super.key, this.patient = const {}});
 
   @override
   State<PatientDetailScreen> createState() => _PatientDetailScreenState();
@@ -126,7 +128,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          'Bella',
+                                          widget.patient['animal_name']?.isNotEmpty == true 
+                                              ? widget.patient['animal_name'] 
+                                              : (widget.patient['animal_type'] ?? 'Unknown'),
                                           style: GoogleFonts.poppins(
                                             fontSize: 26.sp,
                                             fontWeight: FontWeight.w700,
@@ -159,7 +163,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                             ),
                                             SizedBox(width: 4.w),
                                             Text(
-                                              'Recovery',
+                                              (widget.patient['status']?.toString().toUpperCase() ?? 'ADMITTED'),
                                               style: GoogleFonts.nunitoSans(
                                                 fontSize: 11.sp,
                                                 fontWeight: FontWeight.w700,
@@ -173,7 +177,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                   ),
                                   SizedBox(height: 4.h),
                                   Text(
-                                    'Golden Retriever  •  Female  •  2 Yrs',
+                                    '${widget.patient['animal_type'] ?? 'Unknown Type'}  •  ${widget.patient['gender'] ?? 'Unknown'}  •  ${widget.patient['age'] ?? 'Unknown Age'}',
                                     style: GoogleFonts.nunitoSans(
                                       fontSize: 13.sp,
                                       color: Colors.white.withOpacity(0.85),
@@ -190,9 +194,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         // Quick info chips
                         Row(
                           children: [
-                            _buildChip(Icons.tag, '#PT-2938'),
+                            _buildChip(Icons.tag, widget.patient['case_id']?.toString() ?? 'No Case ID'),
                             SizedBox(width: 10.w),
-                            _buildChip(Icons.meeting_room, 'Cage 04, Ward A'),
+                            _buildChip(Icons.meeting_room, widget.patient['cage_number']?.toString() ?? 'Unassigned'),
                             SizedBox(width: 10.w),
                             _buildChip(Icons.calendar_today, 'Day 3'),
                           ],
@@ -220,10 +224,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       _buildStatusBanner(),
                       SizedBox(height: 16.h),
 
-                      // Doctor Panel Button
-                      InkWell(
-                        onTap: () => context.push('/doctor-panel'),
-                        borderRadius: BorderRadius.circular(14.r),
+                      // Doctor Panel Button - Only visible for Doctors
+                      if (AuthStorageService().isDoctor) ...[
+                        InkWell(
+                          onTap: () => context.push('/doctor-panel'),
+                          borderRadius: BorderRadius.circular(14.r),
                         child: Container(
                           padding: EdgeInsets.all(16.w),
                           decoration: BoxDecoration(
@@ -289,6 +294,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                           ),
                         ),
                       ),
+                      ],
                       SizedBox(height: 24.h),
 
                       // Section Title

@@ -42,6 +42,8 @@ class RegistrationProvider extends ChangeNotifier {
   final FocusNode breedFocus = FocusNode();
   int? breedId;
   int? colorId;
+  final TextEditingController colorController = TextEditingController();
+  final FocusNode colorFocus = FocusNode();
   String gender = 'Unknown';
   String age = 'Unknown';
   final TextEditingController weightController = TextEditingController();
@@ -253,6 +255,7 @@ class RegistrationProvider extends ChangeNotifier {
     animalNameController.clear();
     breedController.clear();
     weightController.clear();
+    colorController.clear();
     microchipController.clear();
     symptomsController.clear();
     temperatureController.clear();
@@ -302,6 +305,8 @@ class RegistrationProvider extends ChangeNotifier {
     animalNameController.dispose();
     breedController.dispose();
     breedFocus.dispose();
+    colorController.dispose();
+    colorFocus.dispose();
     weightController.dispose();
     weightFocus.dispose();
     microchipController.dispose();

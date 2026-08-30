@@ -47,6 +47,10 @@ dependencies:
   geocoding: ^5.0.0
   intl: ^0.20.3
   http: ^1.4.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.5
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

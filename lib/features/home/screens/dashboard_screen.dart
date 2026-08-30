@@ -15,7 +15,7 @@ import '../../super_admin/providers/super_admin_provider.dart';
 import '../widgets/home_header.dart';
 import '../widgets/stat_cards.dart';
 import '../widgets/modules_grid.dart';
-import '../widgets/recent_admissions.dart';
+import '../widgets/my_tasks_widget.dart';
 import '../widgets/dashboard_bottom_nav.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -176,7 +176,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SizedBox(height: 20.h),
               const ModulesGrid(),
               SizedBox(height: 20.h),
-              const RecentAdmissions(),
+              MyTasksWidget(
+                onViewAll: () => setState(() => _currentIndex = 1),
+              ),
               SizedBox(height: 100.h), // Space for bottom nav
             ],
           ),

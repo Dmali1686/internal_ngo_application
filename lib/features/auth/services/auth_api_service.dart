@@ -49,8 +49,17 @@ class AuthApiService {
         parsedUserId = data['user_id'].toString();
       } else if (data['user'] is String) {
         parsedUserId = data['user'];
-      } else if (data['user'] is Map) {
-        parsedUserId = data['user']['id']?.toString();
+      }
+
+      bool isDoc = identifier.toLowerCase().contains('doctor');
+      if (data['user'] is Map) {
+        final userMap = data['user'] as Map;
+        parsedUserId = userMap['id']?.toString();
+        final fullName = userMap['full_name']?.toString().toLowerCase() ?? '';
+        final empCode = userMap['employee_code']?.toString().toLowerCase() ?? '';
+        if (fullName.startsWith('dr.') || fullName.startsWith('dr ') || empCode.contains('doc')) {
+          isDoc = true;
+        }
       }
 
       _authStorage.saveTokens(
@@ -58,6 +67,7 @@ class AuthApiService {
         refreshToken: data['refresh_token'] ?? '',
         userId: parsedUserId,
       );
+      _authStorage.setIsDoctor(isDoc);
     }
 
     return response;

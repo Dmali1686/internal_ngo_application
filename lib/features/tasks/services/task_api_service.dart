@@ -41,17 +41,24 @@ class TaskApiService {
   Future<List<TaskModel>> getMyTasks({String? departmentId}) async {
     try {
       final queryParams = departmentId != null ? {'department_id': departmentId} : null;
+      AppLogger.info('TaskApiService', 'getMyTasks → calling GET /tasks/my (departmentId=$departmentId)');
       final response = await _apiClient.get('/tasks/my', queryParameters: queryParams);
+      AppLogger.info('TaskApiService', 'getMyTasks ← statusCode=${response.statusCode}');
+      AppLogger.info('TaskApiService', 'getMyTasks ← raw data=${response.data}');
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> data = response.data['tasks'] ?? [];
-        return data.map((e) => TaskModel.fromJson(e)).toList();
+        AppLogger.info('TaskApiService', 'getMyTasks ← parsed ${data.length} tasks from response');
+        final tasks = data.map((e) => TaskModel.fromJson(e)).toList();
+        return tasks;
       }
+      AppLogger.error('TaskApiService', 'getMyTasks ← non-200 or null data, returning empty list');
       return [];
     } catch (e) {
       AppLogger.error('TaskApiService', 'Failed to get my tasks: $e');
       rethrow;
     }
   }
+
 
   /// Get a single task by ID
   Future<TaskModel?> getTaskById(String id) async {

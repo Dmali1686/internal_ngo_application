@@ -121,59 +121,143 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
     final provider = context.read<RegistrationProvider>();
 
+    // Map gender to API-expected format (MALE / FEMALE / UNKNOWN)
+    String apiGender;
+    final g = provider.gender.toUpperCase();
+    if (g == 'MALE' || g == 'FEMALE') {
+      apiGender = g;
+    } else {
+      apiGender = 'UNKNOWN';
+    }
+
+    // Build symptoms string from tags + free text
+    final symptomParts = <String>[
+      ...provider.symptomTags,
+      if (provider.symptomsController.text.isNotEmpty)
+        provider.symptomsController.text,
+    ];
+
+    // Build tests string from selected tests
+    final selectedTests = provider.requiredTests.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .toList();
+
+    // Build full address from address + city
+    final addressParts = <String>[
+      if (provider.addressController.text.isNotEmpty)
+        provider.addressController.text,
+      if (provider.areaController.text.isNotEmpty)
+        provider.areaController.text,
+      if (provider.cityController.text.isNotEmpty)
+        provider.cityController.text,
+    ];
+
     final request = PatientRegistrationRequest(
-      animalTypeId: provider.animalTypeId ?? 1,
-      breedId: provider.breedId,
-      colorId: provider.colorId,
       animalName: provider.animalNameController.text.isNotEmpty
           ? provider.animalNameController.text
           : null,
-      age: provider.age != 'Unknown' ? provider.age : null,
+      animalType: provider.animalType,
+      age: provider.age != 'Unknown' ? provider.age : 'Unknown',
+      gender: apiGender,
+      color: provider.colorController.text.isNotEmpty
+          ? provider.colorController.text
+          : 'Unknown',
       weight: double.tryParse(provider.weightController.text),
-      gender: provider.gender != 'Unknown' ? provider.gender : null,
-      reporterName: provider.reporterNameController.text.isNotEmpty
-          ? provider.reporterNameController.text
-          : null,
-      reporterMobile: provider.mobileNumberController.text.isNotEmpty
-          ? provider.mobileNumberController.text
-          : null,
-      reporterType: 'Citizen',
-      address: provider.addressController.text.isNotEmpty
-          ? provider.addressController.text
-          : null,
+      isSterilized: provider.isSterilized,
+      animalAddress: addressParts.isNotEmpty
+          ? addressParts.join(', ')
+          : 'Not provided',
       landmark: provider.landmarkController.text.isNotEmpty
           ? provider.landmarkController.text
           : null,
-      description: provider.symptomsController.text.isNotEmpty
-          ? provider.symptomsController.text
+      reporterName: provider.reporterNameController.text.isNotEmpty
+          ? provider.reporterNameController.text
+          : 'Unknown',
+      reporterMobile: provider.mobileNumberController.text.isNotEmpty
+          ? provider.mobileNumberController.text
+          : 'N/A',
+      symptoms: symptomParts.isNotEmpty ? symptomParts.join(', ') : null,
+      diagnosis: provider.initialTreatmentController.text.isNotEmpty
+          ? provider.initialTreatmentController.text
           : null,
-      transportType: 'Ambulance',
-      rescuePriority: provider.priority.toLowerCase(),
+      tests: selectedTests.isNotEmpty ? selectedTests.join(', ') : null,
+      transportedBy: 'Ambulance',
+      transporterContact: provider.alternateNumberController.text.isNotEmpty
+          ? provider.alternateNumberController.text
+          : null,
     );
 
-    final apiService = PatientApiService();
-    final response = await apiService.registerPatient(request: request);
+    try {
+      final apiService = PatientApiService();
+      final response = await apiService.registerPatient(request: request);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isSubmitting = false;
-    });
+      setState(() {
+        _isSubmitting = false;
+      });
 
-    if (response.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rescue Registration Successful!')),
-      );
-      context.go('/registration-success');
-    } else {
+      if (response.success) {
+        // The API wraps the patient in response.data['data']
+        String? caseId;
+        String? patientId;
+        String? qrPayload;
+
+        dynamic dataObj = response.data;
+        if (dataObj is Map<String, dynamic>) {
+          // Try nested { success, data: {...} } wrapper first
+          final inner = dataObj['data'];
+          final src = (inner is Map<String, dynamic>) ? inner : dataObj;
+          caseId = src['case_id']?.toString();
+          patientId = src['id']?.toString();
+          qrPayload = src['qr_payload']?.toString();
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rescue Registration Successful!'),
+            backgroundColor: Color(0xFF006E1C),
+          ),
+        );
+        context.go(
+          '/registration-success',
+          extra: {
+            'case_id': caseId ?? 'N/A',
+            'patient_id': patientId,
+            'qr_payload': qrPayload,
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Registration Failed'),
+            content: Text(
+              response.errorMessage ??
+                  'An error occurred while registering the patient.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Registration Failed'),
-          content: Text(
-            response.errorMessage ??
-                'An error occurred while registering the patient.',
-          ),
+          content: Text('Error: ${e.toString()}'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),

@@ -23,6 +23,14 @@ class AuthStorageService {
   /// The current user ID.
   String? get userId => _userId;
 
+  bool _isDoctor = false;
+  /// True if the currently logged in user is identified as a doctor.
+  bool get isDoctor => _isDoctor;
+
+  void setIsDoctor(bool val) {
+    _isDoctor = val;
+  }
+
   /// Whether the user is currently authenticated.
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
 
@@ -49,5 +57,6 @@ class AuthStorageService {
     _accessToken = null;
     _refreshToken = null;
     _userId = null;
+    _isDoctor = false;
   }
 }

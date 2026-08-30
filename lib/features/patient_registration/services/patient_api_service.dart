@@ -7,33 +7,15 @@ import '../models/patient_registration_model.dart';
 /// API service for patient management endpoints.
 ///
 /// All methods use [ApiClient] which automatically prepends
-/// the base URL (`http://192.168.1.35:8080/api/v1`).
+/// the base URL and `/api/v1` prefix.
 class PatientApiService {
   final ApiClient _client = ApiClient();
 
-  /// List all patients, optionally filtered by status.
-  /// `GET /api/v1/patients`
-  Future<ApiResponse<dynamic>> listPatients({String? status}) {
-    return _client.get(
-      ApiEndpoints.patients,
-      queryParameters: status != null ? {'status': status} : null,
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // 1. Register a New Patient
+  // POST /api/v1/patients
+  // ---------------------------------------------------------------------------
 
-  /// Get today's admissions count
-  /// `GET /api/v1/patients/stats/admissions-today`
-  Future<ApiResponse<dynamic>> getAdmissionsToday() {
-    return _client.get(ApiEndpoints.patientsStatsAdmissionsToday);
-  }
-
-  /// Get today's emergency cases count
-  /// `GET /api/v1/patients/stats/emergency-today`
-  Future<ApiResponse<dynamic>> getEmergencyToday() {
-    return _client.get(ApiEndpoints.patientsStatsEmergencyToday);
-  }
-
-  /// Register a new patient.
-  /// `POST /api/v1/patients`
   Future<ApiResponse<dynamic>> registerPatient({
     required PatientRegistrationRequest request,
   }) {
@@ -41,80 +23,103 @@ class PatientApiService {
     print('========== RESCUE REGISTRATION API REQUEST ==========');
     print(request.toJson());
     print('=====================================================');
-
     return _client.post(ApiEndpoints.patients, body: request.toJson());
   }
 
-  /// Get comprehensive details of a single patient.
-  /// `GET /api/v1/patients/{id}`
-  Future<ApiResponse<dynamic>> getPatientDetail(String patientId) {
+  // ---------------------------------------------------------------------------
+  // 2. Get All Patients (paginated + filtered)
+  // GET /api/v1/patients
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> listPatients({
+    int? page,
+    int? limit,
+    String? search,
+    String? status,
+    String? animalType,
+    String? gender,
+    String? fromDate,
+    String? toDate,
+  }) {
+    final params = <String, String>{};
+    if (page != null) params['page'] = page.toString();
+    if (limit != null) params['limit'] = limit.toString();
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    if (status != null && status.isNotEmpty) params['status'] = status;
+    if (animalType != null && animalType.isNotEmpty) params['animal_type'] = animalType;
+    if (gender != null && gender.isNotEmpty) params['gender'] = gender;
+    if (fromDate != null && fromDate.isNotEmpty) params['from_date'] = fromDate;
+    if (toDate != null && toDate.isNotEmpty) params['to_date'] = toDate;
+
+    return _client.get(
+      ApiEndpoints.patients,
+      queryParameters: params.isNotEmpty ? params : null,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3. Get Patient By ID (UUID)
+  // GET /api/v1/patients/{id}
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> getPatientById(String patientId) {
     return _client.get(ApiEndpoints.patientDetail(patientId));
   }
 
-  /// Update non-critical patient details.
-  /// `PATCH /api/v1/patients/{id}`
+  // ---------------------------------------------------------------------------
+  // 4. Get Patient By Case ID
+  // GET /api/v1/patients/case/{case_id}
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> getPatientByCaseId(String caseId) {
+    return _client.get(ApiEndpoints.patientByCaseId(caseId));
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5. Add a Treatment
+  // POST /api/v1/patients/{id}/treatments
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> addTreatment({
+    required String patientId,
+    required AddTreatmentRequest request,
+  }) {
+    AppLogger.info('PatientApiService', 'addTreatment for patient: $patientId');
+    return _client.post(
+      ApiEndpoints.patientTreatments(patientId),
+      body: request.toJson(),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. Get Treatment History
+  // GET /api/v1/patients/{id}/treatments
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> getTreatmentHistory(String patientId) {
+    return _client.get(ApiEndpoints.patientTreatments(patientId));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stats (used by dashboard)
+  // ---------------------------------------------------------------------------
+
+  Future<ApiResponse<dynamic>> getAdmissionsToday() {
+    return _client.get(ApiEndpoints.patientsStatsAdmissionsToday);
+  }
+
+  Future<ApiResponse<dynamic>> getEmergencyToday() {
+    return _client.get(ApiEndpoints.patientsStatsEmergencyToday);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Update patient (PATCH)
+  // ---------------------------------------------------------------------------
+
   Future<ApiResponse<dynamic>> updatePatient({
     required String patientId,
     required Map<String, dynamic> updates,
   }) {
     return _client.patch(ApiEndpoints.patientDetail(patientId), body: updates);
-  }
-
-  /// Allocate a cage to a patient.
-  /// `POST /api/v1/patients/{id}/cage-allocation`
-  Future<ApiResponse<dynamic>> allocateCage({
-    required String patientId,
-    required String cageId,
-  }) {
-    return _client.post(
-      ApiEndpoints.patientCageAllocation(patientId),
-      body: {'cage_id': cageId},
-    );
-  }
-
-  /// Get the QR code for a patient.
-  /// `GET /api/v1/patients/{id}/qr-code`
-  Future<ApiResponse<dynamic>> getQrCode(String patientId) {
-    return _client.get(ApiEndpoints.patientQrCode(patientId));
-  }
-
-  /// Release a patient, freeing their cage.
-  /// `POST /api/v1/patients/{id}/release`
-  Future<ApiResponse<dynamic>> releasePatient({
-    required String patientId,
-    required Map<String, dynamic> releaseData,
-  }) {
-    return _client.post(
-      ApiEndpoints.patientRelease(patientId),
-      body: releaseData,
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Medical Records
-  // ---------------------------------------------------------------------------
-
-  /// List all medical records for a patient.
-  /// `GET /api/v1/patients/{id}/medical-records`
-  Future<ApiResponse<dynamic>> listMedicalRecords(String patientId) {
-    return _client.get(ApiEndpoints.patientMedicalRecords(patientId));
-  }
-
-  /// Create a new medical record for a patient.
-  /// `POST /api/v1/patients/{id}/medical-records`
-  Future<ApiResponse<dynamic>> createMedicalRecord({
-    required String patientId,
-    required Map<String, dynamic> recordData,
-  }) {
-    return _client.post(
-      ApiEndpoints.patientMedicalRecords(patientId),
-      body: recordData,
-    );
-  }
-
-  /// Get details of a specific medical record.
-  /// `GET /api/v1/medical-records/{id}`
-  Future<ApiResponse<dynamic>> getMedicalRecordDetail(String recordId) {
-    return _client.get(ApiEndpoints.medicalRecordDetail(recordId));
   }
 }

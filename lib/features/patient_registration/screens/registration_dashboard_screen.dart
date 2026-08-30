@@ -17,8 +17,6 @@ class _RegistrationDashboardScreenState
   final PatientApiService _apiService = PatientApiService();
 
   bool _isLoading = true;
-  int _admissionsToday = 0;
-  int _emergencyToday = 0;
   List<dynamic> _recentPatients = [];
 
   @override
@@ -32,49 +30,27 @@ class _RegistrationDashboardScreenState
 
     try {
       final results = await Future.wait([
-        _apiService.getAdmissionsToday(),
-        _apiService.getEmergencyToday(),
-        _apiService.listPatients(),
+        _apiService.listPatients(limit: 20),
       ]);
 
-      final admissionsRes = results[0];
-      final emergencyRes = results[1];
-      final patientsRes = results[2];
-
-      print('========== DASHBOARD API LOGS ==========');
-      print('Admissions API Response: ${admissionsRes.data}');
-      print('Emergency API Response: ${emergencyRes.data}');
-
-      if (patientsRes.data != null) {
-        final list = patientsRes.data as List;
-        print('Patients API Response: Fetched ${list.length} patients');
-        if (list.isNotEmpty) {
-          print('First patient: ${list.first}');
-        }
-      } else {
-        print('Patients API Response: null or error');
-      }
-      print('========================================');
-
-      int parsedAdmissions = 0;
-      if (admissionsRes.success && admissionsRes.data != null) {
-        parsedAdmissions = admissionsRes.data['count'] ?? 0;
-      }
-
-      int parsedEmergency = 0;
-      if (emergencyRes.success && emergencyRes.data != null) {
-        parsedEmergency = emergencyRes.data['count'] ?? 0;
-      }
+      final patientsRes = results[0];
 
       List<dynamic> parsedPatients = [];
       if (patientsRes.success && patientsRes.data != null) {
-        parsedPatients = List<dynamic>.from(patientsRes.data);
+        final raw = patientsRes.data;
+        if (raw is Map<String, dynamic>) {
+          // Paginated response: { success, data: [...], pagination: {...} }
+          final inner = raw['data'];
+          if (inner is List) {
+            parsedPatients = List<dynamic>.from(inner);
+          }
+        } else if (raw is List) {
+          parsedPatients = List<dynamic>.from(raw);
+        }
       }
 
       if (mounted) {
         setState(() {
-          _admissionsToday = parsedAdmissions;
-          _emergencyToday = parsedEmergency;
           _recentPatients = parsedPatients;
           _isLoading = false;
         });
@@ -121,7 +97,7 @@ class _RegistrationDashboardScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSummaryCards(),
+                    _buildPatientCountCard(),
                     SizedBox(height: 24.h),
                     Text(
                       'Quick Actions',
@@ -163,61 +139,34 @@ class _RegistrationDashboardScreenState
     );
   }
 
-  Widget _buildSummaryCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSummaryCard(
-            'Today\'s Admissions',
-            _admissionsToday.toString(),
-            Icons.pets,
-            Colors.green[50]!,
-            Colors.green[700]!,
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: _buildSummaryCard(
-            'Emergency',
-            _emergencyToday.toString(),
-            Icons.warning_amber_rounded,
-            Colors.red[50]!,
-            Colors.red[700]!,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String count,
-    IconData icon,
-    Color bgColor,
-    Color iconColor,
-  ) {
+  Widget _buildPatientCountCard() {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: Colors.green[50],
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 28.w),
-          SizedBox(height: 12.h),
-          Text(
-            count,
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: iconColor,
-            ),
-          ),
-          Text(
-            title,
-            style: TextStyle(fontSize: 14.sp, color: Colors.black87),
+          Icon(Icons.pets, color: Colors.green[700], size: 28.w),
+          SizedBox(width: 16.w),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _recentPatients.length.toString(),
+                style: TextStyle(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+              Text(
+                'Total Patients',
+                style: TextStyle(fontSize: 14.sp, color: Colors.black87),
+              ),
+            ],
           ),
         ],
       ),
@@ -355,14 +304,8 @@ class _RegistrationDashboardScreenState
         side: BorderSide(color: Colors.grey[200]!),
       ),
       child: ListTile(
-        onTap: () async {
-          final shouldRefresh = await context.push(
-            '/edit-patient',
-            extra: patientMap,
-          );
-          if (shouldRefresh == true) {
-            _fetchDashboardData();
-          }
+        onTap: () {
+          context.push('/animal-overview', extra: patientMap);
         },
         contentPadding: EdgeInsets.all(12.w),
         leading: Container(

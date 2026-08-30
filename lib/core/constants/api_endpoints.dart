@@ -74,6 +74,9 @@ class ApiEndpoints {
   /// GET / PATCH — requires `{id}` substitution.
   static String patientDetail(String id) => '/patients/$id';
 
+  /// GET — patient by generated Case ID (e.g. MH14-2026-000001).
+  static String patientByCaseId(String caseId) => '/patients/case/$caseId';
+
   /// POST — cage allocation for a patient.
   static String patientCageAllocation(String id) =>
       '/patients/$id/cage-allocation';

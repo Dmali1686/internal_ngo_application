@@ -144,7 +144,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/patient-detail',
-      builder: (context, state) => const PatientDetailScreen(),
+      builder: (context, state) {
+        final patient = state.extra as Map<String, dynamic>? ?? {};
+        return PatientDetailScreen(patient: patient);
+      },
     ),
     GoRoute(
       path: '/animal-overview',

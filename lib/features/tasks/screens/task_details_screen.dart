@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/text_to_speech_player.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
@@ -215,13 +216,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           SizedBox(height: 20.h),
                           
                           // Description
-                          Text(
-                            'Description',
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textMain,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Description',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textMain,
+                                ),
+                              ),
+                              // 🔊 TTS — tap to hear the description read aloud
+                              TextToSpeechPlayer(
+                                text: _task.description,
+                                languageCode: 'en-IN',
+                              ),
+                            ],
                           ),
                           SizedBox(height: 8.h),
                           Container(
