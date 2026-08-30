@@ -17,6 +17,7 @@ import '../widgets/stat_cards.dart';
 import '../widgets/modules_grid.dart';
 import '../widgets/my_tasks_widget.dart';
 import '../widgets/dashboard_bottom_nav.dart';
+import '../widgets/view_all_animals_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -120,21 +121,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const SuperAdminDashboardScreen();
     }
 
-    // ── Standard roles: existing layout preserved exactly ─────────────────
+    // ── Standard roles: floating card above bottom nav ─────────────────────
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: IndexedStack(
-        index: _currentIndex,
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Stack(
         children: [
-          _buildHomeTab(),
-          const TasksDashboardScreen(),
-          const AlertsScreen(),
-          const ProfileScreen(),
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildHomeTab(),
+              const TasksDashboardScreen(),
+              const AlertsScreen(),
+              const ProfileScreen(),
+            ],
+          ),
+          // Floating "View All Animals" card — only visible on Home tab
+          if (_currentIndex == 0)
+            Positioned(
+              bottom: 8.h, // small gap above the BottomAppBar
+              left: 0,
+              right: 0,
+              child: const ViewAllAnimalsCard(),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/new-registration'),
-        backgroundColor: const Color(0xFF2E8B57), // Green color matching UI
+        backgroundColor: const Color(0xFF2E8B57),
         shape: const CircleBorder(),
         elevation: 2,
         child: Icon(Icons.add, color: Colors.white, size: 28.w),
@@ -152,38 +165,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHomeTab() {
-    return Stack(
-      children: [
-        // Full-screen background image
-        Positioned.fill(
-          child: Image.asset('assets/images/backgound.png', fit: BoxFit.cover),
-        ),
-        // Semi-transparent overlay for readability
-        Positioned.fill(child: Container(color: Colors.white.withOpacity(0))),
-        // Scrollable content
-        SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HomeHeader(
-                onProfileTap: () {
-                  setState(() {
-                    _currentIndex = 3;
-                  });
-                },
-              ),
-              const StatCards(),
-              SizedBox(height: 20.h),
-              const ModulesGrid(),
-              SizedBox(height: 20.h),
-              MyTasksWidget(
-                onViewAll: () => setState(() => _currentIndex = 1),
-              ),
-              SizedBox(height: 100.h), // Space for bottom nav
-            ],
+    final isEmployee =
+        context.watch<SuperAdminProvider>().isEmployee;
+
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          // Full-screen background image — always covers the full height
+          Positioned.fill(
+            child:
+                Image.asset('assets/images/backgound.png', fit: BoxFit.cover),
           ),
-        ),
-      ],
+          // Semi-transparent overlay
+          Positioned.fill(child: Container(color: Colors.white.withOpacity(0))),
+          // Scrollable content
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                HomeHeader(
+                  onProfileTap: () {
+                    setState(() {
+                      _currentIndex = 3;
+                    });
+                  },
+                ),
+                // Stat cards are visible for all roles
+                const StatCards(),
+                SizedBox(height: 20.h),
+                // Module grid is hidden for employees
+                if (!isEmployee) const ModulesGrid(),
+                if (!isEmployee) SizedBox(height: 20.h),
+                MyTasksWidget(
+                  onViewAll: () => setState(() => _currentIndex = 1),
+                ),
+                SizedBox(height: 160.h), // Space for bottom nav + floating card
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

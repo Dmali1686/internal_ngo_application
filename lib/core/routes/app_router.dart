@@ -17,6 +17,7 @@ import '../../features/patient_registration/screens/transport_details_screen.dar
 import '../../features/patient_registration/screens/review_registration_screen.dart';
 import '../../features/patient_registration/screens/registration_success_screen.dart';
 import '../../features/patient_registration/screens/edit_patient_screen.dart';
+import '../../features/patient_registration/screens/all_patients_screen.dart';
 import '../../features/qr_management/screens/qr_scanner_screen.dart';
 import '../../features/qr_management/screens/generate_qr_screen.dart';
 import '../../features/qr_management/screens/print_qr_screen.dart';
@@ -125,6 +126,10 @@ final GoRouter appRouter = GoRouter(
         final patient = state.extra as Map<String, dynamic>;
         return EditPatientScreen(patient: patient);
       },
+    ),
+    GoRoute(
+      path: '/all-patients',
+      builder: (context, state) => const AllPatientsScreen(),
     ),
     GoRoute(
       path: '/qr-scanner',

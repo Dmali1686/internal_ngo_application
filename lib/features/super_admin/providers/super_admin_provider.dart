@@ -9,14 +9,21 @@ import '../../../core/utils/logger.dart';
 /// Call [setRole] from the login screen after the user chooses a role.
 class SuperAdminProvider extends ChangeNotifier {
   bool _isSuperAdmin = false;
+  bool _isEmployee = false;
 
   bool get isSuperAdmin => _isSuperAdmin;
+  bool get isEmployee => _isEmployee;
 
   /// Called from the login screen when the user submits with a role selected.
   void setRole(String role) {
+    final normalized = role.toLowerCase().replaceAll(' ', '');
     final wasSuperAdmin = _isSuperAdmin;
-    _isSuperAdmin = role.toLowerCase().replaceAll(' ', '') == 'superadmin';
-    if (_isSuperAdmin != wasSuperAdmin) notifyListeners();
+    final wasEmployee = _isEmployee;
+    _isSuperAdmin = normalized == 'superadmin';
+    _isEmployee = normalized == 'employee';
+    if (_isSuperAdmin != wasSuperAdmin || _isEmployee != wasEmployee) {
+      notifyListeners();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

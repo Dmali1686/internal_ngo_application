@@ -7,6 +7,7 @@ import 'core/utils/logger.dart';
 
 import 'package:provider/provider.dart';
 import 'features/patient_registration/providers/registration_provider.dart';
+import 'features/patient_registration/providers/patient_list_provider.dart';
 import 'core/services/voice_service.dart';
 import 'core/services/voice_language_provider.dart';
 import 'core/providers/master_data_provider.dart';
@@ -42,6 +43,9 @@ class MyApp extends StatelessWidget {
             ),
             ChangeNotifierProvider(
               create: (_) => TaskProvider()..fetchAllTasks()..fetchAssignedTasks()..fetchMyTasks(),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => PatientListProvider(),
             ),
           ],
           child: MaterialApp.router(
