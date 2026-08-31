@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../models/department_org_model.dart';
 import '../providers/department_org_provider.dart';
+import '../providers/employee_detail_provider.dart';
+import 'employee_detail_screen.dart';
+import '../../../core/utils/logger.dart';
 
 /// Full-screen Team Members / Org-chart view for a department.
 ///
@@ -362,7 +365,27 @@ class _DepartmentOrgScreenState extends State<DepartmentOrgScreen>
         if (data.hod != null && _searchQuery.isEmpty) ...[
           _sectionLabel('Head of Department'),
           SizedBox(height: 10.h),
-          _HodCard(hod: data.hod!, accent: widget.accentColor),
+          _HodCard(
+            hod: data.hod!,
+            accent: widget.accentColor,
+            onTap: () {
+              AppLogger.info('DepartmentOrgScreen', 'Tapped HOD: ${data.hod!.userId} in Dept: ${widget.departmentId}');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider(
+                    create: (_) => EmployeeDetailProvider(),
+                    child: EmployeeDetailScreen(
+                      departmentId: widget.departmentId,
+                      userId: data.hod!.userId,
+                      accentColor: widget.accentColor,
+                      employeeName: data.hod!.fullName,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           SizedBox(height: 24.h),
         ],
 
@@ -405,6 +428,23 @@ class _DepartmentOrgScreenState extends State<DepartmentOrgScreen>
               isHod: isHod,
               accent: widget.accentColor,
               index: index,
+              onTap: () {
+                AppLogger.info('DepartmentOrgScreen', 'Tapped Member: ${employee.userId} in Dept: ${widget.departmentId}');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => EmployeeDetailProvider(),
+                      child: EmployeeDetailScreen(
+                        departmentId: widget.departmentId,
+                        userId: employee.userId,
+                        accentColor: widget.accentColor,
+                        employeeName: employee.fullName,
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           }),
       ],
@@ -504,12 +544,17 @@ class _DepartmentOrgScreenState extends State<DepartmentOrgScreen>
 class _HodCard extends StatelessWidget {
   final OrgEmployee hod;
   final Color accent;
-  const _HodCard({required this.hod, required this.accent});
+  final VoidCallback? onTap;
+
+  const _HodCard({
+    required this.hod,
+    required this.accent,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18.r),
@@ -522,8 +567,15 @@ class _HodCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18.r),
+          child: Padding(
+            padding: EdgeInsets.all(18.w),
+            child: Row(
+              children: [
           // Avatar with HOD crown badge
           Stack(
             clipBehavior: Clip.none,
@@ -651,6 +703,9 @@ class _HodCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  ),
+),
     );
   }
 }
@@ -664,12 +719,14 @@ class _MemberCard extends StatelessWidget {
   final bool isHod;
   final Color accent;
   final int index;
+  final VoidCallback? onTap;
 
   const _MemberCard({
     required this.employee,
     required this.isHod,
     required this.accent,
     required this.index,
+    this.onTap,
   });
 
   /// Light pastel colours for avatar backgrounds when not HOD
@@ -701,7 +758,6 @@ class _MemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -713,8 +769,15 @@ class _MemberCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            child: Row(
+              children: [
           // Avatar
           Container(
             width: 46.w,
@@ -825,6 +888,9 @@ class _MemberCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  ),
+),
     );
   }
 }

@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../org/models/department_org_model.dart';
 import '../../org/providers/department_org_provider.dart';
+import '../../org/providers/employee_detail_provider.dart';
 import '../../org/screens/department_org_screen.dart';
+import '../../org/screens/employee_detail_screen.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/screens/create_task_screen.dart';
 import '../../tasks/screens/task_details_screen.dart';
@@ -355,9 +357,27 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
       SizedBox(height: 10.h),
 
       // HOD card
-      Container(
-        margin: EdgeInsets.only(bottom: 16.h),
-        padding: EdgeInsets.all(16.w),
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChangeNotifierProvider(
+                create: (_) => EmployeeDetailProvider(),
+                child: EmployeeDetailScreen(
+                  departmentId: widget.department.id,
+                  userId: hod.userId,
+                  accentColor: accent,
+                  employeeName: hod.fullName,
+                ),
+              ),
+            ),
+          );
+        },
+        child: Container(
+          margin: EdgeInsets.only(bottom: 16.h),
+          padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
@@ -489,6 +509,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
           ],
         ),
       ),
+    ),
 
       // Section separator
       if (true) ...[  
@@ -533,9 +554,27 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
     final bg = bgPalette[index % bgPalette.length];
     final fg = fgPalette[index % fgPalette.length];
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChangeNotifierProvider(
+              create: (_) => EmployeeDetailProvider(),
+              child: EmployeeDetailScreen(
+                departmentId: widget.department.id,
+                userId: employee.userId,
+                accentColor: accent,
+                employeeName: employee.fullName,
+              ),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -631,8 +670,9 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTagRow(List<String> tags, Color accent,
       {bool compact = false}) {
