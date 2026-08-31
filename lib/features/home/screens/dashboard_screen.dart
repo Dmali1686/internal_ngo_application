@@ -18,6 +18,7 @@ import '../widgets/modules_grid.dart';
 import '../widgets/my_tasks_widget.dart';
 import '../widgets/dashboard_bottom_nav.dart';
 import '../widgets/view_all_animals_card.dart';
+import '../widgets/employee_departments_grid.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -196,6 +197,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Module grid is hidden for employees
                 if (!isEmployee) const ModulesGrid(),
                 if (!isEmployee) SizedBox(height: 20.h),
+                if (isEmployee) const EmployeeDepartmentsGrid(),
+                if (isEmployee) SizedBox(height: 20.h),
                 MyTasksWidget(
                   onViewAll: () => setState(() => _currentIndex = 1),
                 ),

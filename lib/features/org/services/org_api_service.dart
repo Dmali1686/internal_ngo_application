@@ -20,6 +20,9 @@ class OrgApiService {
     );
 
     final data = response.data;
+    print('--- RAW API RESPONSE FOR DEPARTMENT ORGANIZATION ---');
+    print(data);
+    print('----------------------------------------------------');
     if (data is Map<String, dynamic>) {
       return DepartmentOrganizationResponse.fromJson(data);
     }

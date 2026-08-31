@@ -195,7 +195,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: ListenableBuilder(
                 listenable: _orgProvider,
-                builder: (context, _) => _buildTeamSection(color),
+                builder: (context, _) => _buildTeamSection(color, provider),
               ),
             ),
           ),
@@ -216,7 +216,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
 
   // ── Team Section (inline, API-driven) ────────────────────────────────────
 
-  Widget _buildTeamSection(Color accent) {
+  Widget _buildTeamSection(Color accent, SuperAdminProvider provider) {
     // Loading state
     if (_orgProvider.isLoading) {
       return Padding(
@@ -292,6 +292,10 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
     final hod = data.hod;
     final members = [...data.employees, ...data.remainingEmployees];
 
+    final unassignedEmployees = provider.employees
+        .where((e) => !e.departmentIds.contains(widget.department.id))
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,6 +321,23 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
               ),
             ),
           ),
+
+        // ── Unassigned Employees ──────────────────────────────────────────
+        if (unassignedEmployees.isNotEmpty) ...[
+          SizedBox(height: 16.h),
+          Text(
+            'Unassigned Employees',
+            style: GoogleFonts.inter(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMain,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          ...unassignedEmployees.asMap().entries.map((e) {
+            return _buildUnassignedMemberCard(e.value, e.key, accent);
+          }),
+        ],
 
         SizedBox(height: 8.h),
       ],
@@ -673,6 +694,102 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
     ),
   );
 }
+
+  Widget _buildUnassignedMemberCard(
+    DepartmentEmployeeModel employee,
+    int index,
+    Color accent,
+  ) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        // Implement assignment logic or navigation here
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Assign ${employee.name} to ${widget.department.name}? (Backend required)'),
+            backgroundColor: AppColors.primaryGreen,
+          ),
+        );
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10.r,
+              offset: Offset(0, 3.h),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Initials avatar
+            Container(
+              width: 44.w,
+              height: 44.w,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
+                  style: GoogleFonts.inter(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            // Name + position
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    employee.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    employee.role,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 11.sp,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8.w),
+            // Add icon
+            Container(
+              padding: EdgeInsets.all(6.w),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.add, size: 20.w, color: accent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildTagRow(List<String> tags, Color accent,
       {bool compact = false}) {

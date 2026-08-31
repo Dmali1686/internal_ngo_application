@@ -1,10 +1,15 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/registration_provider.dart';
 
 class RegistrationSuccessScreen extends StatelessWidget {
@@ -38,69 +43,82 @@ class RegistrationSuccessScreen extends StatelessWidget {
               _SuccessHeader(),
               SizedBox(height: 28.h),
 
-              // ── Case ID badge ─────────────────────────────────────────
-              _CaseIdBadge(caseId: caseId),
-              SizedBox(height: 28.h),
+              // Case ID and QR code are now combined below
 
               // ── QR Code ───────────────────────────────────────────────
-              _QrCodeCard(qrPayload: qrPayload, caseId: caseId),
+              _QrCodeCard(
+                qrPayload: qrPayload,
+                caseId: caseId,
+                animalName: context.read<RegistrationProvider>().animalNameController.text.isNotEmpty 
+                    ? context.read<RegistrationProvider>().animalNameController.text 
+                    : context.read<RegistrationProvider>().animalType,
+              ),
               SizedBox(height: 32.h),
 
               // ── Actions ───────────────────────────────────────────────
-              if (patientId != null) ...[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<RegistrationProvider>().reset();
-                    context.go(
-                      '/animal-overview',
-                      extra: {
-                        'id': patientId,
-                        'case_id': caseId,
-                        'qr_payload': qrPayload,
-                        'animal_name': null,
-                        'animal_type': null,
-                        'status': 'ADMITTED',
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (patientId != null) ...[
+                    _buildSmallAction(
+                      icon: Icons.visibility_rounded,
+                      label: 'Profile',
+                      color: const Color(0xFF006E1C),
+                      onPressed: () {
+                        context.read<RegistrationProvider>().reset();
+                        context.go(
+                          '/animal-overview',
+                          extra: {
+                            'id': patientId,
+                            'case_id': caseId,
+                            'qr_payload': qrPayload,
+                            'animal_name': null,
+                            'animal_type': null,
+                            'status': 'ADMITTED',
+                          },
+                        );
                       },
-                    );
-                  },
-                  icon: const Icon(Icons.visibility),
-                  label: const Text('View Patient Profile'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006E1C),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
                     ),
-                    textStyle: GoogleFonts.nunitoSans(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
+                    _buildSmallAction(
+                      icon: Icons.share_rounded,
+                      label: 'Share',
+                      color: const Color(0xFFE65100),
+                      onPressed: () {
+                        final provider = context.read<RegistrationProvider>();
+                        context.push(
+                          '/share-to-public',
+                          extra: {
+                            'patient_id': patientId,
+                            'case_id': caseId,
+                            'qr_payload': qrPayload,
+                            'animal_type': provider.animalType,
+                            'breed': provider.breedController.text,
+                            'color': provider.colorController.text,
+                            'gender': provider.gender,
+                            'age': provider.age,
+                            'rescue_location':
+                                '${provider.addressController.text}, ${provider.cityController.text}',
+                            'condition': provider.symptomsController.text,
+                            'urgency': provider.priority,
+                            'photos': provider.reporterPhotos,
+                          },
+                        );
+                      },
                     ),
+                  ],
+                  _buildSmallAction(
+                    icon: Icons.add_rounded,
+                    label: 'New',
+                    color: const Color(0xFF006E1C),
+                    isOutlined: true,
+                    onPressed: () {
+                      context.read<RegistrationProvider>().reset();
+                      context.go('/new-registration');
+                    },
                   ),
-                ),
-                SizedBox(height: 12.h),
-              ],
-              OutlinedButton.icon(
-                onPressed: () {
-                  context.read<RegistrationProvider>().reset();
-                  context.go('/new-registration');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Register Another Animal'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF006E1C),
-                  side: const BorderSide(color: Color(0xFF006E1C)),
-                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.r),
-                  ),
-                  textStyle: GoogleFonts.nunitoSans(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 32.h),
               TextButton(
                 onPressed: () {
                   context.read<RegistrationProvider>().reset();
@@ -119,6 +137,41 @@ class RegistrationSuccessScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+  Widget _buildSmallAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isOutlined = false,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(20.r),
+          child: Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: isOutlined ? Colors.transparent : color.withOpacity(0.1),
+              border: isOutlined ? Border.all(color: color, width: 1.5) : null,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Icon(icon, color: color, size: 28.w),
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          label,
+          style: GoogleFonts.nunitoSans(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -175,117 +228,128 @@ class _SuccessHeader extends StatelessWidget {
   }
 }
 
-// ── Case ID badge ─────────────────────────────────────────────────────────────
-
-class _CaseIdBadge extends StatelessWidget {
-  final String caseId;
-  const _CaseIdBadge({required this.caseId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFF006E1C).withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFF006E1C).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(
-              Icons.tag_rounded,
-              color: const Color(0xFF006E1C),
-              size: 22.w,
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CASE ID',
-                  style: GoogleFonts.nunitoSans(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[500],
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  caseId,
-                  style: GoogleFonts.nunitoSans(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF006E1C),
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: caseId));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Case ID copied!'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
-            icon: Icon(
-              Icons.copy_rounded,
-              color: Colors.grey[400],
-              size: 20.w,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// (Case ID badge is now merged into QR Code Card)
 
 // ── QR Code Card ──────────────────────────────────────────────────────────────
 
-class _QrCodeCard extends StatelessWidget {
+class _QrCodeCard extends StatefulWidget {
   final String? qrPayload;
   final String caseId;
-  const _QrCodeCard({required this.qrPayload, required this.caseId});
+  final String animalName;
+  const _QrCodeCard({required this.qrPayload, required this.caseId, required this.animalName});
+
+  @override
+  State<_QrCodeCard> createState() => _QrCodeCardState();
+}
+
+class _QrCodeCardState extends State<_QrCodeCard> {
+  final GlobalKey _qrKey = GlobalKey();
+
+  Future<void> _shareQrCode() async {
+    try {
+      final boundary = _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      
+      final buffer = byteData.buffer;
+      
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/qr_${widget.caseId}.png').create();
+      await file.writeAsBytes(buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+      
+      await Share.shareXFiles([XFile(file.path)], text: 'Patient QR Code for ${widget.animalName} (${widget.caseId})');
+    } catch (e) {
+      debugPrint('Error sharing QR: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasQr = qrPayload != null && qrPayload!.isNotEmpty;
+    final hasQr = widget.qrPayload != null && widget.qrPayload!.isNotEmpty;
 
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
+          // Merged Case ID Section
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF006E1C).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.tag_rounded,
+                  color: const Color(0xFF006E1C),
+                  size: 22.w,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CASE ID',
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[500],
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      widget.caseId,
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF006E1C),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: widget.caseId));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Case ID copied!'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Icons.copy_rounded,
+                  color: Colors.grey[400],
+                  size: 20.w,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Divider(color: Colors.grey.shade200, thickness: 1),
+          SizedBox(height: 16.h),
+          
+          // QR Code Section
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -306,44 +370,87 @@ class _QrCodeCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: 20.h),
-          if (hasQr)
-            Container(
-              padding: EdgeInsets.all(12.w),
+          RepaintBoundary(
+            key: _qrKey,
+            child: Container(
+              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: QrImageView(
-                data: qrPayload!,
-                version: QrVersions.auto,
-                size: 200.w,
-                backgroundColor: Colors.white,
-              ),
-            )
-          else
-            Container(
-              width: 200.w,
-              height: 200.w,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16.r),
+                color: const Color(0xFFFAFAFA),
+                borderRadius: BorderRadius.circular(32.r),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.qr_code_2, size: 60.w, color: Colors.grey[400]),
-                  SizedBox(height: 8.h),
+                  if (hasQr)
+                    QrImageView(
+                      data: widget.qrPayload!,
+                      version: QrVersions.auto,
+                      size: 200.w,
+                      backgroundColor: const Color(0xFFFAFAFA),
+                    )
+                  else
+                    Container(
+                      width: 200.w,
+                      height: 200.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.qr_code_2, size: 60.w, color: Colors.grey[400]),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'QR not available',
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: 12.sp,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: 12.h),
                   Text(
-                    'QR not available',
+                    widget.animalName.toUpperCase(),
                     style: GoogleFonts.nunitoSans(
-                      fontSize: 12.sp,
-                      color: Colors.grey[500],
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1B1C1C),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    widget.caseId,
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF006E1C),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton.icon(
+            onPressed: _shareQrCode,
+            icon: const Icon(Icons.download_rounded),
+            label: const Text('Download / Share QR'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF006E1C),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.r),
+              ),
+              textStyle: GoogleFonts.nunitoSans(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           SizedBox(height: 16.h),
           Text(
             'Scan this QR code to access the\npatient record instantly.',
@@ -363,7 +470,7 @@ class _QrCodeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Text(
-                qrPayload!,
+                widget.qrPayload!,
                 style: GoogleFonts.nunitoSans(
                   fontSize: 10.sp,
                   color: Colors.grey[500],

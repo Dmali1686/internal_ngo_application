@@ -65,6 +65,9 @@ import '../../features/super_admin/screens/super_admin_dashboard_screen.dart';
 import '../../features/super_admin/screens/department_detail_screen.dart';
 import '../../features/super_admin/screens/super_admin_employee_profile_screen.dart';
 import '../../features/super_admin/models/super_admin_models.dart';
+import '../../features/public_posting/screens/compose_public_post_screen.dart';
+import '../../features/public_posting/providers/compose_post_provider.dart';
+import 'package:provider/provider.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -329,6 +332,16 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final employee = state.extra as DepartmentEmployeeModel;
         return SuperAdminEmployeeProfileScreen(employee: employee);
+      },
+    ),
+    // ── Public Posting routes ───────────────────────────────────────────────
+    GoRoute(
+      path: '/share-to-public',
+      builder: (context, state) {
+        return ChangeNotifierProvider(
+          create: (_) => ComposePostProvider(),
+          child: const ComposePublicPostScreen(),
+        );
       },
     ),
   ],
