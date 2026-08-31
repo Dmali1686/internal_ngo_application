@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -117,13 +118,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final isSuperAdmin = context.watch<SuperAdminProvider>().isSuperAdmin;
 
-    // ── Super Admin: show dedicated management dashboard ──────────────────
-    if (isSuperAdmin) {
-      return const SuperAdminDashboardScreen();
-    }
-
-    // ── Standard roles: floating card above bottom nav ─────────────────────
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        SystemNavigator.pop();
+      },
+      child: isSuperAdmin 
+          ? const SuperAdminDashboardScreen()
+          : Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
         children: [
@@ -162,6 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         },
       ),
+    ),
     );
   }
 
@@ -199,7 +203,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (!isEmployee) SizedBox(height: 20.h),
                 if (isEmployee) const EmployeeDepartmentsGrid(),
                 if (isEmployee) SizedBox(height: 20.h),
-                MyTasksWidget(
+                // My Tasks section is only for non-employee roles.
+                // Employees see their tasks inside the department cards above.
+                if (!isEmployee) MyTasksWidget(
                   onViewAll: () => setState(() => _currentIndex = 1),
                 ),
                 SizedBox(height: 160.h), // Space for bottom nav + floating card

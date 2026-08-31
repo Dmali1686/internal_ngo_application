@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../super_admin/providers/super_admin_provider.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/screens/task_details_screen.dart';
@@ -73,33 +74,57 @@ class _MyTasksWidgetState extends State<MyTasksWidget> {
           // ── Body ─────────────────────────────────────────────────────────
           Consumer<TaskProvider>(
             builder: (context, provider, _) {
-              // ── Debug logging ──────────────────────────────────────────
-              debugPrint('[MyTasksWidget] isLoading=${provider.isLoading}, '
-                  'myTasks.length=${provider.myTasks.length}, '
-                  'error=${provider.errorMessage}');
-              for (final t in provider.myTasks) {
-                debugPrint('[MyTasksWidget]   task: "${t.title}" status=${t.status}');
-              }
-              // ──────────────────────────────────────────────────────────
-
               if (provider.isLoading && provider.myTasks.isEmpty) {
-                debugPrint('[MyTasksWidget] → showing shimmer');
                 return _buildShimmer();
               }
 
+              final grouped = provider.myTasksGrouped;
+              final superAdminProvider = context.watch<SuperAdminProvider>();
+
+              final displayDepts = <String, int>{};
+              
+              if (grouped != null && grouped.departments.isNotEmpty) {
+                for (var dept in grouped.departments) {
+                  displayDepts[dept.departmentName] = dept.tasks.length;
+                }
+              } else if (superAdminProvider.departments.isNotEmpty) {
+                // Mock some departments if they have no tasks but we know they exist
+                for (var i = 0; i < superAdminProvider.departments.length && i < 2; i++) {
+                  displayDepts[superAdminProvider.departments[i].name] = 0;
+                }
+              }
+
+              // Multiple departments → show a card per department
+              if (displayDepts.length > 1) {
+                return Column(
+                  children: displayDepts.keys.map((deptName) {
+                    final group = grouped?.departments.firstWhere(
+                      (d) => d.departmentName == deptName,
+                      orElse: () => DepartmentTaskGroup(
+                        departmentId: '',
+                        departmentCode: '',
+                        departmentName: deptName,
+                        tasks: const [],
+                      ),
+                    );
+                    
+                    final pending = (group?.tasks ?? [])
+                        .where((t) => t.status != 'COMPLETED' && t.status != 'CANCELLED')
+                        .toList();
+                        
+                    return _buildDepartmentCard(context, provider, deptName, pending);
+                  }).toList(),
+                );
+              }
+
+              // Single department → flat task list (original behaviour)
               final tasks = provider.myTasks
                   .where((t) => t.status != 'COMPLETED' && t.status != 'CANCELLED')
                   .take(3)
                   .toList();
 
-              debugPrint('[MyTasksWidget] → filtered (non-done) tasks: ${tasks.length}');
+              if (tasks.isEmpty) return _buildEmptyState();
 
-              if (tasks.isEmpty) {
-                debugPrint('[MyTasksWidget] → showing empty state');
-                return _buildEmptyState();
-              }
-
-              debugPrint('[MyTasksWidget] → rendering ${tasks.length} task card(s)');
               return Column(
                 children: tasks
                     .map((task) => Padding(
@@ -109,6 +134,157 @@ class _MyTasksWidgetState extends State<MyTasksWidget> {
                     .toList(),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Department Summary Card (for multi-department employees) ──────────────
+
+  Widget _buildDepartmentCard(
+    BuildContext context,
+    TaskProvider provider,
+    String deptName,
+    List<TaskModel> tasks,
+  ) {
+    return GestureDetector(
+      onTap: widget.onViewAll,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4.h),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Coloured header bar
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                color: AppColors.primaryGreen.withOpacity(0.08),
+                child: Row(
+                  children: [
+                    Icon(Icons.business_rounded,
+                        size: 16.sp, color: AppColors.primaryGreen),
+                    SizedBox(width: 6.w),
+                    Expanded(
+                      child: Text(
+                        deptName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryGreen,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: tasks.isEmpty
+                            ? Colors.grey.shade200
+                            : AppColors.primaryGreen.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        tasks.isEmpty ? 'All done' : '${tasks.length} pending',
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: tasks.isEmpty
+                              ? Colors.grey
+                              : AppColors.primaryGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Show up to 2 tasks inline; or empty state
+              if (tasks.isEmpty)
+                Padding(
+                  padding: EdgeInsets.all(14.w),
+                  child: Text(
+                    'No pending tasks in this department 🎉',
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 13.sp,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                )
+              else
+                ...tasks.take(2).map((task) => Padding(
+                      padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 0),
+                      child: _buildInlineTaskRow(task),
+                    )),
+              if (tasks.length > 2)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(14.w, 6.h, 14.w, 10.h),
+                  child: Text(
+                    '+${tasks.length - 2} more tasks',
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 12.sp,
+                      color: AppColors.primaryGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                SizedBox(height: 10.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlineTaskRow(TaskModel task) {
+    final priorityData = _priorityData(task.priority);
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8.h),
+      child: Row(
+        children: [
+          Container(
+            width: 3.w,
+            height: 36.h,
+            decoration: BoxDecoration(
+              color: priorityData['color'] as Color,
+              borderRadius: BorderRadius.circular(2.r),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              task.title,
+              style: GoogleFonts.nunitoSans(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMain,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          _badge(
+            label: task.status == 'IN_PROGRESS' ? 'In Progress' : 'Pending',
+            color: task.status == 'IN_PROGRESS'
+                ? const Color(0xFF8B5CF6)
+                : const Color(0xFFF59E0B),
+            bg: task.status == 'IN_PROGRESS'
+                ? const Color(0xFF8B5CF6).withOpacity(0.1)
+                : const Color(0xFFFFFBEB),
           ),
         ],
       ),

@@ -15,8 +15,9 @@ import '../theme/app_colors.dart';
 /// - Haptic feedback
 class GlobalVoiceButton extends StatefulWidget {
   final Widget child;
+  final Function(String)? onDictate;
 
-  const GlobalVoiceButton({super.key, required this.child});
+  const GlobalVoiceButton({super.key, required this.child, this.onDictate});
 
   @override
   State<GlobalVoiceButton> createState() => _GlobalVoiceButtonState();
@@ -95,11 +96,16 @@ class _GlobalVoiceButtonState extends State<GlobalVoiceButton>
       // Stop listening
       voiceService.stopListening();
     } else {
-      // Start listening
-      _transcriptFadeController.reset();
-      _pulseController.repeat(reverse: true);
+      // Prevent Android SpeechRecognizer bug by unfocusing keyboard first
+      FocusManager.instance.primaryFocus?.unfocus();
+      
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!mounted) return;
+        // Start listening
+        _transcriptFadeController.reset();
+        _pulseController.repeat(reverse: true);
 
-      voiceService.startListening(
+        voiceService.startListening(
         onResultFinalized: (text) {
           _pulseController.stop();
           _pulseController.reset();
@@ -109,7 +115,11 @@ class _GlobalVoiceButtonState extends State<GlobalVoiceButton>
 
             // Show transcript briefly then process
             Future.delayed(const Duration(milliseconds: 500), () {
-              _commandManager.processCommand(context, text);
+              if (widget.onDictate != null) {
+                widget.onDictate!(text);
+              } else {
+                _commandManager.processCommand(context, text);
+              }
               if (mounted) {
                 setState(() => _isProcessing = false);
               }
@@ -129,9 +139,14 @@ class _GlobalVoiceButtonState extends State<GlobalVoiceButton>
               _lastTranscript = text;
             });
             _transcriptFadeController.reset(); // Keep visible while typing
+            
+            if (widget.onDictate != null && text.isNotEmpty) {
+              widget.onDictate!(text);
+            }
           }
         },
       );
+      });
     }
   }
 

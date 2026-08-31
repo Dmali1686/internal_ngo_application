@@ -9,12 +9,22 @@ import '../../org/models/department_org_model.dart';
 import '../../org/services/org_api_service.dart';
 import '../../../core/utils/app_error_handler.dart';
 import '../providers/task_provider.dart';
+import '../providers/task_form_provider.dart';
+import '../services/task_voice_assistant.dart';
 import '../../../core/services/voice_service.dart';
+import '../../../core/widgets/global_voice_button.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   final String? initialDepartmentId;
+  final String? initialAssigneeId;
+  final String? initialAssigneeName;
 
-  const CreateTaskScreen({super.key, this.initialDepartmentId});
+  const CreateTaskScreen({
+    super.key,
+    this.initialDepartmentId,
+    this.initialAssigneeId,
+    this.initialAssigneeName,
+  });
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -22,15 +32,10 @@ class CreateTaskScreen extends StatefulWidget {
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  TextEditingController? _activeListeningController;
   
-  String? _selectedDepartmentId;
-  String? _selectedAssigneeId;
-  String _selectedPriority = 'NORMAL';
-  DateTime? _selectedDueDate;
-  
+  late final TaskFormProvider _formProvider;
+  late final TaskVoiceAssistant _voiceAssistant;
+
   final List<String> _priorities = ['NORMAL', 'IMPORTANT', 'URGENT'];
   bool _isSubmitting = false;
 
@@ -41,9 +46,23 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   void initState() {
     super.initState();
+    _formProvider = TaskFormProvider();
+    _formProvider.addListener(() {
+      if (mounted) setState(() {});
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final voiceService = context.read<VoiceService>();
+      _voiceAssistant = TaskVoiceAssistant(voiceService, _formProvider);
+    });
+    
     if (widget.initialDepartmentId != null) {
-      _selectedDepartmentId = widget.initialDepartmentId;
-      _fetchEmployees(_selectedDepartmentId!);
+      _formProvider.setDepartmentId(widget.initialDepartmentId);
+      _fetchEmployees(widget.initialDepartmentId!);
+    }
+    // Pre-fill assignee if provided (e.g., tapped from unassigned list)
+    if (widget.initialAssigneeId != null) {
+      _formProvider.setAssigneeId(widget.initialAssigneeId);
     }
   }
 
@@ -51,7 +70,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     setState(() {
       _isLoadingEmployees = true;
       _availableEmployees = [];
-      _selectedAssigneeId = null;
+      _formProvider.setAssigneeId(null);
     });
 
     try {
@@ -65,6 +84,28 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             seen.add(e.userId);
             return true;
           }).toList();
+          
+          // If we tapped an unassigned user, they won't be in the department's team.
+          // Inject them so the DropdownButton doesn't crash on a missing value.
+          if (widget.initialAssigneeId != null && 
+              departmentId == widget.initialDepartmentId &&
+              !seen.contains(widget.initialAssigneeId)) {
+            _availableEmployees.add(
+              OrgEmployee(
+                userId: widget.initialAssigneeId!,
+                fullName: widget.initialAssigneeName ?? 'Unknown User',
+                email: '',
+                employeeCode: '',
+                positionName: 'Unassigned',
+                tags: const [],
+              ),
+            );
+          }
+          
+          // Restore the initial assignee selection after fetching
+          if (widget.initialAssigneeId != null && departmentId == widget.initialDepartmentId) {
+            _formProvider.setAssigneeId(widget.initialAssigneeId);
+          }
         });
       }
     } catch (e) {
@@ -80,14 +121,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
+    // Abort any running voice session so the assistant stops when navigating away
+    _voiceAssistant.abort();
+    _formProvider.dispose();
     super.dispose();
   }
 
   Future<void> _submitTask() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedDepartmentId == null || _selectedAssigneeId == null) {
+    if (_formProvider.selectedDepartmentId == null || _formProvider.selectedAssigneeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a department and assignee.')),
       );
@@ -98,12 +140,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
     final provider = context.read<TaskProvider>();
     final success = await provider.createTask(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      priority: _selectedPriority,
-      departmentId: _selectedDepartmentId!,
-      assignedToId: _selectedAssigneeId!,
-      dueDate: _selectedDueDate?.toUtc().toIso8601String(),
+      title: _formProvider.titleController.text.trim(),
+      description: _formProvider.descriptionController.text.trim(),
+      priority: _formProvider.selectedPriority,
+      departmentId: _formProvider.selectedDepartmentId!,
+      assignedToId: _formProvider.selectedAssigneeId!,
+      dueDate: _formProvider.selectedDueDate?.toUtc().toIso8601String(),
     );
 
     setState(() => _isSubmitting = false);
@@ -128,54 +170,62 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     final superAdminProvider = context.watch<SuperAdminProvider>();
     final departments = superAdminProvider.departments;
 
-    return Scaffold(
+    return GlobalVoiceButton(
+      child: Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: Stack(
         children: [
-          // Background Gradient Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 280.h,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E293B), Color(0xFF0F766E)],
-                ),
+          // Header Background
+          Container(
+            height: 200.h,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
           ),
           
           SafeArea(
-            bottom: false,
             child: Column(
               children: [
-                // Custom App Bar
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Row(
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                          onPressed: () => Navigator.pop(context),
+                      IconButton(
+                        icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.sp),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'New Task',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
-                      SizedBox(width: 16.w),
-                      Text(
-                        'Create New Task',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20.sp,
-                        ),
+                      const Spacer(),
+                      Consumer<VoiceService>(
+                        builder: (context, voiceService, _) {
+                          return IconButton(
+                            icon: Icon(
+                              voiceService.isVoiceModeActive ? Icons.mic : Icons.mic_none,
+                              color: Colors.white,
+                              size: 28.sp,
+                            ),
+                            onPressed: () {
+                              if (voiceService.isVoiceModeActive) {
+                                voiceService.abortVoice();
+                              } else {
+                                _voiceAssistant.startVoiceFlow();
+                              }
+                            },
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -210,19 +260,21 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                   SizedBox(height: 20.h),
                                   _buildLabel('Task Title', Icons.title_rounded),
                                   _buildTextField(
-                                    controller: _titleController,
+                                    controller: _formProvider.titleController,
+                                    focusNode: _formProvider.titleFocus,
                                     hint: 'e.g. Morning checkup for Bella',
-                                    enableVoice: true,
                                     validator: (val) => val == null || val.isEmpty ? 'Title is required' : null,
+                                    isActiveVoiceField: _formProvider.activeVoiceField == 'title',
                                   ),
                                   SizedBox(height: 20.h),
                                   _buildLabel('Description', Icons.notes_rounded),
                                   _buildTextField(
-                                    controller: _descriptionController,
+                                    controller: _formProvider.descriptionController,
+                                    focusNode: _formProvider.descriptionFocus,
                                     hint: 'Enter detailed instructions or notes',
                                     maxLines: 4,
-                                    enableVoice: true,
                                     validator: (val) => val == null || val.isEmpty ? 'Description is required' : null,
+                                    isActiveVoiceField: _formProvider.activeVoiceField == 'description',
                                   ),
                                   SizedBox(height: 32.h),
                                   
@@ -231,23 +283,25 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                   SizedBox(height: 20.h),
                                   _buildLabel('Department', Icons.business_rounded),
                                   _buildDropdown<String>(
-                                    value: _selectedDepartmentId,
+                                    value: _formProvider.selectedDepartmentId,
                                     items: departments.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
                                     hint: 'Select Department',
                                     onChanged: widget.initialDepartmentId != null ? null : (val) {
-                                      if (val != null && val != _selectedDepartmentId) {
-                                        setState(() => _selectedDepartmentId = val);
+                                      if (val != null && val != _formProvider.selectedDepartmentId) {
+                                        setState(() => _formProvider.setDepartmentId(val));
                                         _fetchEmployees(val);
                                       }
                                     },
+                                    isActiveVoiceField: _formProvider.activeVoiceField == 'department',
                                   ),
                                   SizedBox(height: 20.h),
                                   _buildLabel('Assign To', Icons.person_rounded),
                                   _buildDropdown<String>(
-                                    value: _selectedAssigneeId,
+                                    value: _formProvider.selectedAssigneeId,
                                     items: _availableEmployees.map((e) => DropdownMenuItem(value: e.userId, child: Text(e.fullName))).toList(),
-                                    hint: _isLoadingEmployees ? 'Loading...' : _selectedDepartmentId == null ? 'Select Department First' : 'Select Employee',
-                                    onChanged: _selectedDepartmentId == null || _isLoadingEmployees ? null : (val) => setState(() => _selectedAssigneeId = val),
+                                    hint: _isLoadingEmployees ? 'Loading...' : _formProvider.selectedDepartmentId == null ? 'Select Department First' : 'Select Employee',
+                                    onChanged: _formProvider.selectedDepartmentId == null || _isLoadingEmployees ? null : (val) => setState(() => _formProvider.setAssigneeId(val)),
+                                    isActiveVoiceField: _formProvider.activeVoiceField == 'assignee',
                                   ),
                                   SizedBox(height: 32.h),
                                   
@@ -262,7 +316,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                           children: [
                                             _buildLabel('Priority', Icons.flag_rounded),
                                             _buildDropdown<String>(
-                                              value: _selectedPriority,
+                                              value: _formProvider.selectedPriority,
+                                              isActiveVoiceField: _formProvider.activeVoiceField == 'priority',
+                                              onChanged: (val) {
+                                                if (val != null) setState(() => _formProvider.setPriority(val));
+                                              },
                                               items: _priorities.map((p) => DropdownMenuItem(
                                                 value: p,
                                                 child: Row(
@@ -284,7 +342,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                                 ),
                                               )).toList(),
                                               hint: 'Select',
-                                              onChanged: (val) => setState(() => _selectedPriority = val!),
                                             ),
                                           ],
                                         ),
@@ -299,7 +356,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                               onTap: () async {
                                                 final picked = await showDatePicker(
                                                   context: context,
-                                                  initialDate: _selectedDueDate ?? DateTime.now(),
+                                                  initialDate: _formProvider.selectedDueDate ?? DateTime.now(),
                                                   firstDate: DateTime.now(),
                                                   lastDate: DateTime(2050),
                                                   builder: (context, child) {
@@ -314,7 +371,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                                   },
                                                 );
                                                 if (picked != null) {
-                                                  setState(() => _selectedDueDate = picked);
+                                                  setState(() => _formProvider.setDueDate(picked));
                                                 }
                                               },
                                               child: Container(
@@ -329,13 +386,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
                                                     Text(
-                                                      _selectedDueDate == null
+                                                      _formProvider.selectedDueDate == null
                                                           ? 'Optional'
-                                                          : '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}',
+                                                          : '${_formProvider.selectedDueDate!.day}/${_formProvider.selectedDueDate!.month}/${_formProvider.selectedDueDate!.year}',
                                                       style: GoogleFonts.inter(
-                                                        color: _selectedDueDate == null ? AppColors.textMuted : AppColors.textMain,
+                                                        color: _formProvider.selectedDueDate == null ? AppColors.textMuted : AppColors.textMain,
                                                         fontSize: 13.sp,
-                                                        fontWeight: _selectedDueDate == null ? FontWeight.normal : FontWeight.w600,
+                                                        fontWeight: _formProvider.selectedDueDate == null ? FontWeight.normal : FontWeight.w600,
                                                       ),
                                                     ),
                                                     Icon(Icons.calendar_month_rounded, color: const Color(0xFF0F766E), size: 18.w),
@@ -399,6 +456,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -451,73 +509,36 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     required String hint,
     int maxLines = 1,
     String? Function(String?)? validator,
+    FocusNode? focusNode,
     bool enableVoice = false,
+    bool isActiveVoiceField = false,
   }) {
-    return Consumer<VoiceService>(
-      builder: (context, voiceService, _) {
-        final bool isThisListening =
-            voiceService.isListening && _activeListeningController == controller;
-
-        return TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          validator: validator,
-          style: GoogleFonts.inter(
-            fontSize: 14.sp,
-            color: AppColors.textMain,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14.sp),
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            suffixIcon: enableVoice
-                ? IconButton(
-                    icon: Icon(
-                      isThisListening ? Icons.mic : Icons.mic_none,
-                      color: isThisListening ? const Color(0xFF0F766E) : AppColors.textMuted,
-                    ),
-                    onPressed: () {
-                      if (voiceService.isListening) {
-                        voiceService.stopListening();
-                        if (mounted) {
-                          setState(() => _activeListeningController = null);
-                        }
-                      } else {
-                        if (mounted) {
-                          setState(() => _activeListeningController = controller);
-                        }
-                        voiceService.startListening(
-                          onResultFinalized: (text) {
-                            if (text.isNotEmpty) {
-                              controller.text = text;
-                            }
-                            if (mounted) {
-                              setState(() => _activeListeningController = null);
-                            }
-                          },
-                          onResultPartial: (text) {
-                            if (text.isNotEmpty) {
-                              controller.text = text;
-                            }
-                          },
-                        );
-                      }
-                    },
-                  )
-                : null,
-            border: OutlineInputBorder(
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      maxLines: maxLines,
+      validator: validator,
+      style: GoogleFonts.inter(
+        fontSize: 14.sp,
+        color: AppColors.textMain,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14.sp),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: BorderSide(color: isActiveVoiceField ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0), width: isActiveVoiceField ? 2.0 : 1.0),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderSide: BorderSide(color: isActiveVoiceField ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0), width: isActiveVoiceField ? 2.0 : 1.0),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF0F766E), width: 2.0),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
@@ -528,8 +549,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
             ),
           ),
-        );
-      },
     );
   }
 
@@ -538,6 +557,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     required List<DropdownMenuItem<T>> items,
     required String hint,
     required void Function(T?)? onChanged,
+    bool isActiveVoiceField = false,
   }) {
     return DropdownButtonFormField<T>(
       value: value,
@@ -557,15 +577,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: BorderSide(color: isActiveVoiceField ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0), width: isActiveVoiceField ? 2.0 : 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: BorderSide(color: isActiveVoiceField ? const Color(0xFF0F766E) : const Color(0xFFE2E8F0), width: isActiveVoiceField ? 2.0 : 1.0),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF0F766E), width: 2.0),
         ),
       ),
     );

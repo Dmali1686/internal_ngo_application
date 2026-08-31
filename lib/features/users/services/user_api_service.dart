@@ -7,6 +7,7 @@ import '../models/user_assignment_request.dart';
 import '../models/department_model.dart';
 import '../models/position_model.dart';
 import '../models/access_category_model.dart';
+import '../models/user_model.dart';
 
 
 /// Service for Super Admin user-management APIs.
@@ -164,5 +165,26 @@ class UserApiService {
 
     AppLogger.action('UserApiService', '=== EMPLOYEE CREATED SUCCESSFULLY ===');
     return ApiResponse.ok({'user_id': userId, 'message': 'Employee created successfully'});
+  }
+
+  /// Fetches all active users — Super Admin only.
+  ///
+  /// GET /api/v1/users
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      final response = await _client.get('/users');
+      if (response.success && response.data != null) {
+        final List<dynamic> data = response.data is List
+            ? response.data
+            : (response.data['users'] ?? []);
+        return data
+            .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error('UserApiService', 'Failed to get all users: $e');
+      rethrow;
+    }
   }
 }

@@ -134,51 +134,69 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text;
 
-    AppLogger.action('LoginScreen', '--- LOGIN ATTEMPT ---');
-    AppLogger.info('LoginScreen', 'Role Selected: $_selectedRole');
-    AppLogger.info('LoginScreen', 'Identifier: $identifier');
-    AppLogger.info('LoginScreen', 'Password: [HIDDEN]');
+    // ── Input validation ─────────────────────────────────────────────────────
+    if (identifier.isEmpty || password.isEmpty) {
+      _showErrorDialog(
+        'Please enter your ${_selectedRole == 'Super Admin' ? 'email/mobile' : 'username'} and password.',
+      );
+      return;
+    }
 
-    // Actually trigger the API request so you can see the network logs in the terminal
-    // and see the request hit the backend.
+    setState(() => _isLoading = true);
+
+    AppLogger.action('LoginScreen', '--- LOGIN ATTEMPT ---');
+    AppLogger.info('LoginScreen', 'Role: $_selectedRole | Identifier: $identifier');
+
     try {
-      AppLogger.action('LoginScreen', 'Sending request to backend...');
       final response = await _authService.login(
         identifier: identifier,
         password: password,
         role: _selectedRole,
       );
-      
-      AppLogger.info('LoginScreen', 'Response Success: ${response.success}');
-      if (!response.success) {
-        AppLogger.error('LoginScreen', 'Backend Error Message: ${response.errorMessage}');
+
+      AppLogger.info(
+        'LoginScreen',
+        'Response success=${response.success} | HTTP ${response.statusCode}',
+      );
+
+      if (!mounted) return;
+
+      if (response.success) {
+        // ✅ Credentials correct — navigate to dashboard
+        AppLogger.info('LoginScreen', 'Login successful. Navigating...');
+        context.read<SuperAdminProvider>().setRole(_selectedRole);
+        context.go('/dashboard-transition');
       } else {
-        AppLogger.info('LoginScreen', 'Backend Data: ${response.data}');
+        // ❌ Backend rejected credentials — show user-friendly message
+        final code = response.statusCode;
+        final String msg;
+
+        if (code == 401 || code == 403) {
+          msg = 'Invalid ${_selectedRole == 'Super Admin' ? 'email/mobile' : 'username'} or password. Please try again.';
+        } else if (code == 404) {
+          msg = 'Account not found. Please check your credentials.';
+        } else if (code >= 500) {
+          msg = 'Server error. Please try again in a moment.';
+        } else {
+          msg = response.errorMessage ??
+              'Login failed. Please check your credentials and try again.';
+        }
+
+        AppLogger.error('LoginScreen', 'Login failed (HTTP $code): ${response.errorMessage}');
+        _showErrorDialog(msg);
       }
     } catch (e) {
-      AppLogger.error('LoginScreen', 'Exception during login request: $e');
-    }
-
-    AppLogger.action('LoginScreen', 'Bypassing strict auth lock to allow UI testing...');
-    
-    // Simulate a brief delay if the API was too fast
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    if (mounted) {
-      // Set the Super Admin flag based on the role selected at login
-      context.read<SuperAdminProvider>().setRole(_selectedRole);
-
-      setState(() {
-        _isLoading = false;
-      });
-      context.go('/dashboard-transition');
+      AppLogger.error('LoginScreen', 'Network exception during login: $e');
+      if (mounted) {
+        _showErrorDialog(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

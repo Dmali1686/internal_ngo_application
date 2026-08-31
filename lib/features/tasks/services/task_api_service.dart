@@ -2,8 +2,11 @@ import '../../../core/network/api_client.dart';
 import '../../../core/utils/logger.dart';
 import '../models/task_model.dart';
 
+
 class TaskApiService {
   final ApiClient _apiClient;
+  // Temporary cache for dept id/code during flat-format fallback grouping
+  final Map<String, ({String id, String code})> _deptMeta = {};
 
   TaskApiService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
@@ -37,27 +40,75 @@ class TaskApiService {
     }
   }
 
-  /// Get tasks assigned TO the logged-in user (EMP001, etc.)
-  Future<List<TaskModel>> getMyTasks({String? departmentId}) async {
+  /// Get tasks assigned TO the logged-in user — grouped by department.
+  ///
+  /// Returns a [MyTasksGroupedResponse] with a list of department buckets.
+  Future<MyTasksGroupedResponse> getMyTasksGrouped() async {
     try {
-      final queryParams = departmentId != null ? {'department_id': departmentId} : null;
-      AppLogger.info('TaskApiService', 'getMyTasks → calling GET /tasks/my (departmentId=$departmentId)');
-      final response = await _apiClient.get('/tasks/my', queryParameters: queryParams);
-      AppLogger.info('TaskApiService', 'getMyTasks ← statusCode=${response.statusCode}');
-      AppLogger.info('TaskApiService', 'getMyTasks ← raw data=${response.data}');
+      AppLogger.info('TaskApiService', 'getMyTasksGrouped → GET /tasks/my');
+      final response = await _apiClient.get('/tasks/my');
+      AppLogger.info('TaskApiService', 'getMyTasksGrouped ← statusCode=${response.statusCode}');
       if (response.statusCode == 200 && response.data != null) {
+        // New grouped format: { "departments": [...] }
+        if (response.data is Map && response.data['departments'] != null) {
+          final result = MyTasksGroupedResponse.fromJson(
+              response.data as Map<String, dynamic>);
+          AppLogger.info('TaskApiService',
+              'getMyTasksGrouped ← ${result.departments.length} dept groups, ${result.allTasks.length} total tasks');
+          return result;
+        }
+        // Fallback: old flat format { "tasks": [...] }
+        // Group by the task's own department name instead of hardcoding 'My Tasks'
         final List<dynamic> data = response.data['tasks'] ?? [];
-        AppLogger.info('TaskApiService', 'getMyTasks ← parsed ${data.length} tasks from response');
         final tasks = data.map((e) => TaskModel.fromJson(e)).toList();
-        return tasks;
+
+        // Group by actual department
+        final Map<String, List<TaskModel>> byDept = {};
+        for (final t in tasks) {
+          final deptName = t.department?.name ?? 'General';
+          final deptId   = t.department?.id   ?? '';
+          final deptCode = t.department?.code  ?? '';
+          byDept.putIfAbsent(deptName, () => []).add(t);
+          // store id/code on first encounter (used below)
+          _deptMeta[deptName] = (id: deptId, code: deptCode);
+        }
+
+        final groups = byDept.entries.map((e) {
+          final meta = _deptMeta[e.key] ?? (id: '', code: '');
+          return DepartmentTaskGroup(
+            departmentId:   meta.id,
+            departmentCode: meta.code,
+            departmentName: e.key,
+            tasks: e.value,
+          );
+        }).toList();
+
+        return MyTasksGroupedResponse(departments: groups);
       }
-      AppLogger.error('TaskApiService', 'getMyTasks ← non-200 or null data, returning empty list');
-      return [];
+      return const MyTasksGroupedResponse(departments: []);
     } catch (e) {
       AppLogger.error('TaskApiService', 'Failed to get my tasks: $e');
       rethrow;
     }
   }
+
+  /// Legacy flat list — kept for backwards compat.
+  Future<List<TaskModel>> getMyTasks({String? departmentId}) async {
+    try {
+      final grouped = await getMyTasksGrouped();
+      if (departmentId != null) {
+        final dept = grouped.departments
+            .where((d) => d.departmentId == departmentId)
+            .toList();
+        return dept.isEmpty ? [] : dept.first.tasks;
+      }
+      return grouped.allTasks;
+    } catch (e) {
+      AppLogger.error('TaskApiService', 'getMyTasks (flat) failed: $e');
+      rethrow;
+    }
+  }
+
 
 
   /// Get a single task by ID

@@ -12,6 +12,8 @@ import '../../org/screens/employee_detail_screen.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/screens/create_task_screen.dart';
 import '../../tasks/screens/task_details_screen.dart';
+import '../../users/models/user_model.dart';
+import '../../users/services/user_api_service.dart';
 import '../models/super_admin_models.dart';
 import '../providers/super_admin_provider.dart';
 
@@ -31,6 +33,10 @@ class DepartmentDetailScreen extends StatefulWidget {
 
 class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
   late final DepartmentOrgProvider _orgProvider;
+  final UserApiService _userApiService = UserApiService();
+
+  List<UserModel> _allUsers = [];
+  bool _isLoadingUsers = false;
 
   static final Map<String, IconData> _icons = {
     'medical': Icons.medical_services_rounded,
@@ -54,8 +60,20 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
   void initState() {
     super.initState();
     _orgProvider = DepartmentOrgProvider();
-    // Load org data immediately
     _orgProvider.load(widget.department.id);
+    _loadAllUsers();
+  }
+
+  Future<void> _loadAllUsers() async {
+    setState(() => _isLoadingUsers = true);
+    try {
+      final users = await _userApiService.getAllUsers();
+      if (mounted) setState(() => _allUsers = users);
+    } catch (_) {
+      // Non-critical — gracefully degrade
+    } finally {
+      if (mounted) setState(() => _isLoadingUsers = false);
+    }
   }
 
   @override
@@ -290,10 +308,24 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
 
     final data = _orgProvider.data!;
     final hod = data.hod;
-    final members = [...data.employees, ...data.remainingEmployees];
+    final uniqueMembers = <String, OrgEmployee>{};
+    for (var emp in data.employees) {
+      if (emp.userId != hod?.userId) {
+        uniqueMembers[emp.userId] = emp;
+      }
+    }
+    final members = uniqueMembers.values.toList();
+    
+    // Use the GET /api/v1/users API to find unassigned employees
+    // Filter out users who are already in this department.
+    final unassignedFromApi = _allUsers
+        .where((u) => u.isActive && !u.isInDepartment(widget.department.id))
+        .toList();
 
-    final unassignedEmployees = provider.employees
-        .where((e) => !e.departmentIds.contains(widget.department.id))
+    // Deduplicate by user id just in case
+    final seen = <String>{};
+    final unassigned = unassignedFromApi
+        .where((u) => seen.add(u.id))
         .toList();
 
     return Column(
@@ -322,20 +354,38 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
             ),
           ),
 
-        // ── Unassigned Employees ──────────────────────────────────────────
-        if (unassignedEmployees.isNotEmpty) ...[
-          SizedBox(height: 16.h),
-          Text(
-            'Unassigned Employees',
-            style: GoogleFonts.inter(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textMain,
+        // ── Unassigned Employees (from real API) ─────────────────────────
+        if (_isLoadingUsers)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 12.h),
+            child: Center(
+              child: SizedBox(
+                width: 20.w,
+                height: 20.w,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: accent),
+              ),
             ),
+          )
+        else if (unassigned.isNotEmpty) ...[
+          SizedBox(height: 16.h),
+          Row(
+            children: [
+              Icon(Icons.person_add_alt_1_rounded, size: 14.sp, color: AppColors.textMuted),
+              SizedBox(width: 6.w),
+              Text(
+                'Available to Assign Task',
+                style: GoogleFonts.inter(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMain,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: 10.h),
-          ...unassignedEmployees.asMap().entries.map((e) {
-            return _buildUnassignedMemberCard(e.value, e.key, accent);
+          ...unassigned.asMap().entries.map((e) {
+            return _buildUnassignedUserCard(e.value, e.key, accent);
           }),
         ],
 
@@ -695,19 +745,26 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
   );
 }
 
-  Widget _buildUnassignedMemberCard(
-    DepartmentEmployeeModel employee,
-    int index,
-    Color accent,
-  ) {
+
+  /// Card for a user who is NOT yet in this department.
+  /// Tapping opens CreateTaskScreen with this user pre-filled as the assignee.
+  Widget _buildUnassignedUserCard(UserModel user, int index, Color accent) {
+    final initials = user.initials;
+    final primaryPosition = user.assignments.isNotEmpty
+        ? user.assignments.first.positionName
+        : 'Employee';
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        // Implement assignment logic or navigation here
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Assign ${employee.name} to ${widget.department.name}? (Backend required)'),
-            backgroundColor: AppColors.primaryGreen,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CreateTaskScreen(
+              initialDepartmentId: widget.department.id,
+              initialAssigneeId: user.id,
+              initialAssigneeName: user.fullName,
+            ),
           ),
         );
       },
@@ -717,31 +774,35 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: accent.withOpacity(0.15),
+            style: BorderStyle.solid,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10.r,
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8.r,
               offset: Offset(0, 3.h),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Initials avatar
+            // Avatar
             Container(
               width: 44.w,
               height: 44.w,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: accent.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Text(
-                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
+                  initials,
                   style: GoogleFonts.inter(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade700,
+                    color: accent,
                   ),
                 ),
               ),
@@ -753,7 +814,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    employee.name,
+                    user.fullName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -764,7 +825,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    employee.role,
+                    primaryPosition,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -776,14 +837,28 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
               ),
             ),
             SizedBox(width: 8.w),
-            // Add icon
+            // Assign task button
             Container(
-              padding: EdgeInsets.all(6.w),
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
               decoration: BoxDecoration(
                 color: accent.withOpacity(0.1),
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(10.r),
               ),
-              child: Icon(Icons.add, size: 20.w, color: accent),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.assignment_ind_rounded, size: 14.sp, color: accent),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Assign Task',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

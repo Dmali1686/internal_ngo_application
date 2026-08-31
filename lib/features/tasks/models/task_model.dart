@@ -101,3 +101,53 @@ class TaskModel {
     };
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grouped My-Tasks Response (new format from GET /api/v1/tasks/my)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One department bucket inside the grouped my-tasks response.
+class DepartmentTaskGroup {
+  final String departmentId;
+  final String departmentCode;
+  final String departmentName;
+  final List<TaskModel> tasks;
+
+  const DepartmentTaskGroup({
+    required this.departmentId,
+    required this.departmentCode,
+    required this.departmentName,
+    required this.tasks,
+  });
+
+  factory DepartmentTaskGroup.fromJson(Map<String, dynamic> json) {
+    return DepartmentTaskGroup(
+      departmentId: json['department_id']?.toString() ?? '',
+      departmentCode: json['department_code']?.toString() ?? '',
+      departmentName: json['department_name']?.toString() ?? '',
+      tasks: ((json['tasks'] as List?) ?? [])
+          .map((e) => TaskModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Top-level wrapper for GET /api/v1/tasks/my.
+class MyTasksGroupedResponse {
+  final List<DepartmentTaskGroup> departments;
+
+  const MyTasksGroupedResponse({required this.departments});
+
+  factory MyTasksGroupedResponse.fromJson(Map<String, dynamic> json) {
+    return MyTasksGroupedResponse(
+      departments: ((json['departments'] as List?) ?? [])
+          .map((e) => DepartmentTaskGroup.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// Flat list of all tasks across all departments.
+  List<TaskModel> get allTasks =>
+      departments.expand((d) => d.tasks).toList();
+}
+

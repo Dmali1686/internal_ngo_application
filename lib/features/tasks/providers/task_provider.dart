@@ -16,6 +16,30 @@ class TaskProvider extends ChangeNotifier {
   List<TaskModel> _myTasks = [];
   List<TaskModel> get myTasks => _myTasks;
 
+  /// Grouped my-tasks response from the new API.
+  MyTasksGroupedResponse? _myTasksGrouped;
+  MyTasksGroupedResponse? get myTasksGrouped => _myTasksGrouped;
+
+  /// Currently selected department filter (null = show all).
+  String? _selectedDepartmentFilter;
+  String? get selectedDepartmentFilter => _selectedDepartmentFilter;
+
+  void setDepartmentFilter(String? departmentId) {
+    _selectedDepartmentFilter = departmentId;
+    notifyListeners();
+  }
+
+  /// Returns tasks for the currently selected department filter.
+  /// If null, returns all tasks across all departments.
+  List<TaskModel> get filteredMyTasks {
+    if (_myTasksGrouped == null) return _myTasks;
+    if (_selectedDepartmentFilter == null) return _myTasksGrouped!.allTasks;
+    final dept = _myTasksGrouped!.departments
+        .where((d) => d.departmentId == _selectedDepartmentFilter)
+        .toList();
+    return dept.isEmpty ? [] : dept.first.tasks;
+  }
+
   List<TaskModel> _assignedTasks = [];
   List<TaskModel> get assignedTasks => _assignedTasks;
 
@@ -35,13 +59,12 @@ class TaskProvider extends ChangeNotifier {
   Future<void> fetchMyTasks({String? departmentId}) async {
     _setLoading(true);
     _setError(null);
-    AppLogger.info('TaskProvider', 'fetchMyTasks → starting fetch (departmentId=$departmentId)');
+    AppLogger.info('TaskProvider', 'fetchMyTasks → starting grouped fetch');
     try {
-      _myTasks = await _apiService.getMyTasks(departmentId: departmentId);
-      AppLogger.info('TaskProvider', 'fetchMyTasks ← stored ${_myTasks.length} tasks in _myTasks');
-      for (final t in _myTasks) {
-        AppLogger.info('TaskProvider', '  task: id=${t.id}, title="${t.title}", status=${t.status}, priority=${t.priority}');
-      }
+      _myTasksGrouped = await _apiService.getMyTasksGrouped();
+      _myTasks = _myTasksGrouped!.allTasks;
+      AppLogger.info('TaskProvider',
+          'fetchMyTasks ← ${_myTasksGrouped!.departments.length} departments, ${_myTasks.length} total tasks');
     } catch (e) {
       AppLogger.error('TaskProvider', 'fetchMyTasks ← error: $e');
       _setError(e.toString());

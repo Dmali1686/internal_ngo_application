@@ -1,8 +1,9 @@
-/// Simple in-memory auth token storage.
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Simple in-memory auth token storage with SharedPreferences persistence.
 ///
-/// Currently stores tokens in memory. Can be extended to use
-/// SharedPreferences or FlutterSecureStorage for persistence
-/// across app restarts.
+/// Stores tokens in memory for fast access, and backs them up
+/// to SharedPreferences for persistence across app restarts.
 class AuthStorageService {
   static final AuthStorageService _instance = AuthStorageService._internal();
 
@@ -13,6 +14,7 @@ class AuthStorageService {
   String? _accessToken;
   String? _refreshToken;
   String? _userId;
+  bool _isDoctor = false;
 
   /// The current access token (JWT).
   String? get accessToken => _accessToken;
@@ -23,16 +25,25 @@ class AuthStorageService {
   /// The current user ID.
   String? get userId => _userId;
 
-  bool _isDoctor = false;
   /// True if the currently logged in user is identified as a doctor.
   bool get isDoctor => _isDoctor;
 
-  void setIsDoctor(bool val) {
-    _isDoctor = val;
-  }
-
   /// Whether the user is currently authenticated.
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+
+  /// Initialize from SharedPreferences at app startup.
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _accessToken = prefs.getString('auth_access_token');
+    _refreshToken = prefs.getString('auth_refresh_token');
+    _userId = prefs.getString('auth_user_id');
+    _isDoctor = prefs.getBool('auth_is_doctor') ?? false;
+  }
+
+  void setIsDoctor(bool val) {
+    _isDoctor = val;
+    _saveToPrefs();
+  }
 
   /// Store tokens after successful login or token refresh.
   void saveTokens({
@@ -45,11 +56,13 @@ class AuthStorageService {
     if (userId != null) {
       _userId = userId;
     }
+    _saveToPrefs();
   }
 
   /// Update only the access token (e.g., after a refresh).
   void updateAccessToken(String accessToken) {
     _accessToken = accessToken;
+    _saveToPrefs();
   }
 
   /// Clear all stored auth data (logout).
@@ -58,5 +71,31 @@ class AuthStorageService {
     _refreshToken = null;
     _userId = null;
     _isDoctor = false;
+    _saveToPrefs();
+  }
+
+  /// Persist current state to SharedPreferences
+  Future<void> _saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (_accessToken != null) {
+      await prefs.setString('auth_access_token', _accessToken!);
+    } else {
+      await prefs.remove('auth_access_token');
+    }
+    
+    if (_refreshToken != null) {
+      await prefs.setString('auth_refresh_token', _refreshToken!);
+    } else {
+      await prefs.remove('auth_refresh_token');
+    }
+    
+    if (_userId != null) {
+      await prefs.setString('auth_user_id', _userId!);
+    } else {
+      await prefs.remove('auth_user_id');
+    }
+    
+    await prefs.setBool('auth_is_doctor', _isDoctor);
   }
 }
