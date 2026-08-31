@@ -10,7 +10,7 @@ import '../../tasks/screens/admin_all_tasks_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import 'department_detail_screen.dart';
 import 'create_employee_screen.dart';
-import '../../home/widgets/view_all_animals_card.dart';
+import '../../patient_registration/screens/all_patients_screen.dart';
 
 /// Screen 1 — Super Admin Management Dashboard
 class SuperAdminDashboardScreen extends StatefulWidget {
@@ -65,19 +65,15 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                   ],
                 ),
               ),
-              Positioned(
-                bottom: 20.h,
-                left: 0,
-                right: 0,
-                child: const ViewAllAnimalsCard(),
-              ),
             ],
           ),
           // Tab 1 — Create Employee
           const CreateEmployeeScreen(),
-          // Tab 2 — All Tasks (SUP001 global view)
+          // Tab 2 — Animals List
+          const AllPatientsScreen(),
+          // Tab 3 — All Tasks (SUP001 global view)
           const AdminAllTasksScreen(),
-          // Tab 3 — Profile (reuse existing screen)
+          // Tab 4 — Profile (reuse existing screen)
           const ProfileScreen(),
         ],
       ),
@@ -422,6 +418,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     final items = [
       _NavItem(icon: Icons.home, label: 'Dashboard'),
       _NavItem(icon: Icons.person_add_alt_1_rounded, label: 'Add User'),
+      _NavItem(icon: Icons.pets_rounded, label: 'Animals'),
       _NavItem(icon: Icons.task_alt_rounded, label: 'Tasks'),
       _NavItem(icon: Icons.person_outline, label: 'Profile'),
     ];

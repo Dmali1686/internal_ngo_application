@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/voice_language_provider.dart';
-import '../../alerts/screens/alerts_screen.dart';
+import '../../patient_registration/screens/all_patients_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../tasks/screens/tasks_dashboard_screen.dart';
 import '../../super_admin/screens/super_admin_dashboard_screen.dart';
@@ -18,7 +18,6 @@ import '../widgets/stat_cards.dart';
 import '../widgets/modules_grid.dart';
 import '../widgets/my_tasks_widget.dart';
 import '../widgets/dashboard_bottom_nav.dart';
-import '../widgets/view_all_animals_card.dart';
 import '../widgets/employee_departments_grid.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -135,18 +134,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               _buildHomeTab(),
               const TasksDashboardScreen(),
-              const AlertsScreen(),
+              const AllPatientsScreen(),
               const ProfileScreen(),
             ],
           ),
-          // Floating "View All Animals" card — only visible on Home tab
-          if (_currentIndex == 0)
-            Positioned(
-              bottom: 8.h, // small gap above the BottomAppBar
-              left: 0,
-              right: 0,
-              child: const ViewAllAnimalsCard(),
-            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

@@ -35,10 +35,9 @@ class DashboardBottomNav extends StatelessWidget {
             SizedBox(width: 40.w), // Space for FAB
             _buildNavItem(
               2,
-              Icons.notifications_none,
-              'Alerts',
+              Icons.pets_rounded,
+              'Animals',
               isSelected: currentIndex == 2,
-              badge: '5',
             ),
             _buildNavItem(
               3,
