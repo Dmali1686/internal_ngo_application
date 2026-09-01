@@ -9,6 +9,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/paw_pattern_painter.dart';
 import '../../../core/services/auth_storage_service.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../services/auth_api_service.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
 
@@ -134,6 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  String _getAccessIdForRole(String role) {
+    switch (role) {
+      case 'Super Admin':
+        return '8637ac1d-3bd3-45b1-9c0d-7d5cdf96c559';
+      case 'Admin':
+        return '77f14ddd-5818-4a37-9768-6afd2715929c';
+      case 'Employee':
+        return 'd166526c-330a-4f70-b2e2-b7eeae0d4056';
+      default:
+        return 'd166526c-330a-4f70-b2e2-b7eeae0d4056';
+    }
+  }
+
   Future<void> _handleLogin() async {
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text;
@@ -141,8 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
     // ── Input validation ─────────────────────────────────────────────────────
     if (identifier.isEmpty || password.isEmpty) {
       _showErrorDialog(
-        'Please enter your ${_selectedRole == 'Super Admin' ? 'email/mobile' : 'username'} and password.',
+        'Please enter your mobile number and password.',
       );
+      return;
+    }
+
+    if (identifier.length != 10 || int.tryParse(identifier) == null) {
+      _showErrorDialog('Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -159,9 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await _authService.login(
-        identifier: identifier,
+        mobile: identifier,
         password: password,
-        role: _selectedRole,
+        accessId: _getAccessIdForRole(_selectedRole),
       );
 
       debugPrint('====== DEBUG LOGIN RESPONSE ======');
@@ -184,25 +203,25 @@ class _LoginScreenState extends State<LoginScreen> {
         context.read<SuperAdminProvider>().setRole(_selectedRole);
         AuthStorageService().saveRole(_selectedRole); // persist role for app restart
         context.go('/dashboard-transition');
-      } else {
-        // ❌ Backend rejected credentials — show user-friendly message
-        final code = response.statusCode;
-        final String msg;
-
-        if (code == 401 || code == 403) {
-          msg = 'Invalid ${_selectedRole == 'Super Admin' ? 'email/mobile' : 'username'} or password. Please try again.';
-        } else if (code == 404) {
-          msg = 'Account not found. Please check your credentials.';
-        } else if (code >= 500) {
-          msg = 'Server error. Please try again in a moment.';
-        } else {
-          msg = response.errorMessage ??
-              'Login failed. Please check your credentials and try again.';
-        }
-
-        AppLogger.error('LoginScreen', 'Login failed (HTTP $code): ${response.errorMessage}');
-        _showErrorDialog(msg);
       }
+    } on ApiException catch (e) {
+      // ❌ Backend rejected credentials — show user-friendly message
+      final code = e.statusCode;
+      String msg;
+
+      if (code == 400) {
+        msg = 'Please check your input formats.';
+      } else if (code == 401) {
+        // This will display exactly why it failed (e.g. wrong password, deactivated, wrong role)
+        msg = e.message;
+      } else if (code == 500) {
+        msg = 'System error. Please contact the administrator.';
+      } else {
+        msg = e.message.isNotEmpty ? e.message : 'Login failed. Please check your credentials and try again.';
+      }
+
+      AppLogger.error('LoginScreen', 'Login failed (HTTP $code): ${e.message}');
+      if (mounted) _showErrorDialog(msg);
     } catch (e) {
       AppLogger.error('LoginScreen', 'Network exception during login: $e');
       if (mounted) {
@@ -348,13 +367,13 @@ class _LoginScreenState extends State<LoginScreen> {
           _buildRoleDropdown(),
           SizedBox(height: 20.h),
 
-          // Identifier Field (Email/Mobile or Username)
-          _buildTextFieldLabel(_selectedRole == 'Super Admin' ? 'Email or Mobile *' : 'Username *'),
+          // Identifier Field (Mobile)
+          _buildTextFieldLabel('Mobile Number *'),
           SizedBox(height: 8.h),
           _buildTextField(
             controller: _identifierController,
-            hint: _selectedRole == 'Super Admin' ? 'e.g. admin@mh14.org or 9876543210' : 'e.g. jdoe123',
-            keyboardType: _selectedRole == 'Super Admin' ? TextInputType.emailAddress : TextInputType.text,
+            hint: 'e.g. 9876543210',
+            keyboardType: TextInputType.phone,
           ),
           SizedBox(height: 20.h),
 

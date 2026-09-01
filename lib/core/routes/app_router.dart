@@ -232,7 +232,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/doctor-panel',
-      builder: (context, state) => const DoctorPanelScreen(),
+      builder: (context, state) {
+        final Map<String, dynamic>? patientData = state.extra as Map<String, dynamic>?;
+        return DoctorPanelScreen(patientData: patientData);
+      },
     ),
     GoRoute(
       path: '/doctor-medical-orders',

@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
+import '../services/auth_storage_service.dart';
+import 'package:go_router/go_router.dart';
 
 /// Central error handling utility for the entire app.
 ///
@@ -120,9 +122,16 @@ class AppErrorHandler {
   /// Shows a styled **error** snackbar.
   static void showError(BuildContext context, Object error) {
     if (!context.mounted) return;
+    final message = translate(error);
+
+    if (message == 'Your session has expired. Please log in again.') {
+      _showSessionExpiredDialog(context, message);
+      return;
+    }
+
     _showSnackBar(
       context,
-      message: translate(error),
+      message: message,
       isError: true,
     );
   }
@@ -130,6 +139,12 @@ class AppErrorHandler {
   /// Shows a styled **error** snackbar with a custom pre-translated message.
   static void showErrorMessage(BuildContext context, String message) {
     if (!context.mounted) return;
+    
+    if (message == 'Your session has expired. Please log in again.') {
+      _showSessionExpiredDialog(context, message);
+      return;
+    }
+
     _showSnackBar(context, message: message, isError: true);
   }
 
@@ -256,6 +271,83 @@ class AppErrorHandler {
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w700,
                 fontSize: 14.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shows a strict modal dialog when the session expires.
+  static void _showSessionExpiredDialog(BuildContext context, String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        titlePadding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 0),
+        contentPadding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 0),
+        actionsPadding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
+        title: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.lock_clock_rounded,
+                color: const Color(0xFFDC2626),
+                size: 22.w,
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              'Session Expired',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 16.sp,
+                color: AppColors.textMain,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: GoogleFonts.inter(
+            fontSize: 13.sp,
+            color: AppColors.textMuted,
+            height: 1.55,
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                AuthStorageService().clear();
+                Navigator.pop(dialogContext); // Close dialog
+                context.go('/login'); // Navigate to login
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Log In Again',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14.sp,
+                ),
               ),
             ),
           ),

@@ -13,29 +13,17 @@ class AuthApiService {
 
   /// Login an internal user based on role.
   Future<ApiResponse<dynamic>> login({
-    required String identifier, // username or email_or_mobile
+    required String mobile, 
     required String password,
-    required String role, // 'Employee', 'Admin', 'Super Admin'
+    required String accessId, 
   }) async {
-    String endpoint;
-    Map<String, dynamic> body = {'password': password};
-
-    if (role == 'Employee') {
-      endpoint = ApiEndpoints.authEmployeeLogin;
-      body['username'] = identifier;
-    } else if (role == 'Admin') {
-      // Using employee login API for Admin as requested.
-      endpoint = ApiEndpoints.authEmployeeLogin;
-      body['username'] = identifier;
-    } else {
-      // Super Admin
-      endpoint = ApiEndpoints.authSuperAdminLogin;
-      body['email_or_mobile'] = identifier;
-    }
-
     final response = await _client.post(
-      endpoint,
-      body: body,
+      ApiEndpoints.authLogin,
+      body: {
+        'mobile': mobile,
+        'password': password,
+        'access_id': accessId,
+      },
     );
 
     // Auto-store tokens on successful login.
@@ -49,7 +37,7 @@ class AuthApiService {
         parsedUserId = data['user'];
       }
 
-      bool isDoc = identifier.toLowerCase().contains('doctor');
+      bool isDoc = false;
       if (data['user'] is Map) {
         final userMap = data['user'] as Map;
         parsedUserId = userMap['id']?.toString();

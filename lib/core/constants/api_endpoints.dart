@@ -9,9 +9,7 @@ class ApiEndpoints {
   // ---------------------------------------------------------------------------
   // Internal Auth
   // ---------------------------------------------------------------------------
-  static const String authSuperAdminLogin = '/auth/superadmin/login';
-  static const String authAdminLogin = '/auth/admin/login';
-  static const String authEmployeeLogin = '/auth/employee/login';
+  static const String authLogin = '/auth/login';
   static const String authRegister = '/auth/register';
   static const String authRefresh = '/auth/refresh';
   static const String authMe = '/auth/me';

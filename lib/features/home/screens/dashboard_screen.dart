@@ -11,6 +11,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../../super_admin/screens/super_admin_dashboard_screen.dart';
 import '../../super_admin/screens/admin_dashboard_screen.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
+import '../../tasks/providers/task_provider.dart';
 
 // Extracted Widgets
 import '../widgets/home_header.dart';
@@ -33,11 +34,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // On every app launch (including restarts), restore the persisted role
       // and refresh data from the backend. This fixes the black screen issue
       // where the role was lost in memory after the app was closed.
-      context.read<SuperAdminProvider>().restoreFromStorage();
+      await context.read<SuperAdminProvider>().restoreFromStorage();
+      if (!mounted) return;
+      // After role is restored, immediately fetch tasks for employees so the
+      // department cards load in real-time without requiring a manual refresh.
+      final superAdminProvider = context.read<SuperAdminProvider>();
+      if (superAdminProvider.isEmployee) {
+        context.read<TaskProvider>().fetchMyTasks();
+      }
       _checkAndShowLanguageDialog();
     });
   }

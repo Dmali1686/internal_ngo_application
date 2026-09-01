@@ -14,13 +14,59 @@ import '../screens/department_tasks_screen.dart';
 // Tapping a card navigates to DepartmentTasksScreen.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class EmployeeDepartmentsGrid extends StatelessWidget {
+class EmployeeDepartmentsGrid extends StatefulWidget {
   const EmployeeDepartmentsGrid({super.key});
+
+  @override
+  State<EmployeeDepartmentsGrid> createState() =>
+      _EmployeeDepartmentsGridState();
+}
+
+class _EmployeeDepartmentsGridState extends State<EmployeeDepartmentsGrid> {
+  @override
+  void initState() {
+    super.initState();
+    // Trigger a live fetch every time the employee dashboard loads so that
+    // newly assigned tasks (e.g. from Super Admin) appear without requiring
+    // a manual pull-to-refresh.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<TaskProvider>().fetchMyTasks();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
     final grouped = taskProvider.myTasksGrouped;
+
+    // Show loading indicator while the first fetch is in progress
+    if (taskProvider.isLoading && grouped == null) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'My Departments',
+              style: GoogleFonts.poppins(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textMain,
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryGreen,
+                strokeWidth: 2.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     // Only show departments that have at least one task
     final List<DepartmentTaskGroup> activeDepts = grouped?.departments

@@ -305,7 +305,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       // Doctor Panel Button - Visible for Doctors, Admins, Super Admins & Medical HOD
                       if (_canAccessDoctorPanel) ...[
                         InkWell(
-                          onTap: () => context.push('/doctor-panel'),
+                          onTap: () => context.push('/doctor-panel', extra: _patientData),
                           borderRadius: BorderRadius.circular(14.r),
                         child: Container(
                           padding: EdgeInsets.all(16.w),

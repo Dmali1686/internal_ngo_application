@@ -97,12 +97,23 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
     // Fetch patient by case ID
     _showLoadingDialog(caseId);
-    final res = await _apiService.getPatientByCaseId(caseId);
+    
+    dynamic res;
+    String? errorMessage;
+    try {
+      res = await _apiService.getPatientByCaseId(caseId);
+    } catch (e) {
+      errorMessage = e.toString();
+      // Clean up exception prefix if any
+      if (errorMessage.contains('Exception: ')) {
+        errorMessage = errorMessage.replaceAll('Exception: ', '');
+      }
+    }
 
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
 
-    if (res.success && res.data != null) {
+    if (res != null && res.success && res.data != null) {
       // Parse response
       Map<String, dynamic>? patientMap;
       final raw = res.data;
@@ -128,7 +139,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     setState(() {
       _isProcessing = false;
       _lastError =
-          'Patient not found for Case ID: $caseId\n${res.errorMessage ?? ''}';
+          'Patient not found for Case ID: $caseId\n${errorMessage ?? res?.errorMessage ?? ''}';
     });
     await _cameraController.start();
   }
