@@ -64,27 +64,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           index: _currentNavIndex,
           children: [
             // Tab 0 — Home Dashboard (background image + stats + dept grid)
-            Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/backgound.png',
-                    fit: BoxFit.cover,
+            SizedBox.expand(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/backgound.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(context),
-                      _buildStatsCard(stats),
-                      _buildDepartmentsGrid(context, adminDepartments),
-                      SizedBox(height: 120.h),
-                    ],
+                  SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(context),
+                        _buildStatsCard(stats),
+                        _buildDepartmentsGrid(context, adminDepartments),
+                        SizedBox(height: 120.h),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             // Tab 1 — Create Task
             const CreateTaskScreen(),

@@ -67,13 +67,33 @@ class AuthApiService {
       );
       _authStorage.setIsDoctor(isDoc);
       
-      // Fetch profile to get department_id and other details
+      // Fetch profile to get department_id, position title and other details
       try {
         final profileRes = await getProfile();
         if (profileRes.success && profileRes.data is Map) {
           final profileMap = profileRes.data as Map;
           if (profileMap['department_id'] != null) {
             _authStorage.setDepartmentId(profileMap['department_id'].toString());
+          }
+          // Save the backend position/role title (e.g. 'Medical HOD', 'Veterinarian')
+          final backendRole = profileMap['role']?.toString() ??
+              profileMap['position_title']?.toString() ??
+              profileMap['position']?.toString() ??
+              profileMap['access_category']?.toString();
+          if (backendRole != null && backendRole.isNotEmpty) {
+            _authStorage.setPositionTitle(backendRole);
+            // Auto-detect if the user is a doctor/HOD from their backend role
+            final roleLower = backendRole.toLowerCase();
+            if (!isDoc &&
+                (roleLower.contains('doctor') ||
+                    roleLower.contains('dr.') ||
+                    roleLower.contains('veterinar') ||
+                    roleLower.contains('hod') ||
+                    roleLower.contains('medical officer') ||
+                    roleLower.contains('medical hod'))) {
+              isDoc = true;
+              _authStorage.setIsDoctor(isDoc);
+            }
           }
         }
       } catch (e) {

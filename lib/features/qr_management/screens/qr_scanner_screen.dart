@@ -112,6 +112,12 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       }
 
       if (patientMap != null) {
+        // Debug: log all keys so we can verify the id field name
+        print('========== QR SCAN: patientMap keys ==========');
+        print(patientMap.keys.toList());
+        print('id: ${patientMap['id']}  patient_id: ${patientMap['patient_id']}');
+        print('case_id: ${patientMap['case_id']}  animal_name: ${patientMap['animal_name']}');
+        print('================================================');
         // Navigate to patient detail — replace current route
         context.pushReplacement('/patient-detail', extra: patientMap);
         return;

@@ -17,6 +17,7 @@ class AuthStorageService {
   String? _departmentId;
   bool _isDoctor = false;
   String? _role; // persisted role: 'Super Admin', 'Admin', 'Employee'
+  String? _positionTitle; // backend-returned position title e.g. 'Medical HOD'
 
   /// The current access token (JWT).
   String? get accessToken => _accessToken;
@@ -36,6 +37,9 @@ class AuthStorageService {
   /// The persisted role: 'Super Admin', 'Admin', or 'Employee'.
   String? get role => _role;
 
+  /// The backend-assigned position title (e.g. 'Medical HOD', 'Veterinarian').
+  String? get positionTitle => _positionTitle;
+
   /// Whether the user is currently authenticated.
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
 
@@ -48,10 +52,17 @@ class AuthStorageService {
     _departmentId = prefs.getString('auth_department_id');
     _isDoctor = prefs.getBool('auth_is_doctor') ?? false;
     _role = prefs.getString('auth_role'); // restore role on restart
+    _positionTitle = prefs.getString('auth_position_title'); // restore backend position
   }
 
   void setIsDoctor(bool val) {
     _isDoctor = val;
+    _saveToPrefs();
+  }
+
+  /// Store the backend position title (e.g. 'Medical HOD') after login.
+  void setPositionTitle(String? title) {
+    _positionTitle = title;
     _saveToPrefs();
   }
 
@@ -94,6 +105,7 @@ class AuthStorageService {
     _departmentId = null;
     _isDoctor = false;
     _role = null;
+    _positionTitle = null;
     _saveToPrefs();
   }
 
@@ -129,6 +141,12 @@ class AuthStorageService {
       await prefs.setString('auth_role', _role!);
     } else {
       await prefs.remove('auth_role');
+    }
+
+    if (_positionTitle != null) {
+      await prefs.setString('auth_position_title', _positionTitle!);
+    } else {
+      await prefs.remove('auth_position_title');
     }
     
     await prefs.setBool('auth_is_doctor', _isDoctor);
