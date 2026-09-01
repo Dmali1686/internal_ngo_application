@@ -341,98 +341,50 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Contact card ─────────────────────────────────────────────────────
-        Container(
-          margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: widget.accentColor.withOpacity(0.12),
-                blurRadius: 20.r,
-                offset: Offset(0, 8.h),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10.r,
-                offset: Offset(0, 2.h),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        // ── Tasks list ────────────────────────────────────────────────────
+        SizedBox(height: 20.h),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Card header strip
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
-                decoration: BoxDecoration(
-                  color: widget.accentColor.withOpacity(0.06),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.w),
-                      decoration: BoxDecoration(
-                        color: widget.accentColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Icon(
-                        Icons.person_outline_rounded,
-                        size: 15.w,
-                        color: widget.accentColor,
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      'Contact Information',
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMain,
-                      ),
-                    ),
-                  ],
-                ),
+              _SectionLabel(
+                title: 'Assigned Tasks',
+                icon: Icons.task_alt_rounded,
+                accent: widget.accentColor,
               ),
-              Padding(
-                padding: EdgeInsets.all(18.w),
-                child: Column(
-                  children: [
-                    _ContactRow(
-                      icon: Icons.mail_outline_rounded,
-                      label: 'Email',
-                      value: data.email.isNotEmpty ? data.email : '—',
-                      accent: widget.accentColor,
+              if (data.tasks.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: widget.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    '${data.tasks.length}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      color: widget.accentColor,
                     ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10.h),
-                      child: Divider(height: 1, color: const Color(0xFFF0F0F5)),
-                    ),
-                    _ContactRow(
-                      icon: Icons.badge_outlined,
-                      label: 'Employee Code',
-                      value: data.employeeCode.isNotEmpty ? data.employeeCode : '—',
-                      accent: widget.accentColor,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10.h),
-                      child: Divider(height: 1, color: const Color(0xFFF0F0F5)),
-                    ),
-                    _ContactRow(
-                      icon: Icons.shield_outlined,
-                      label: 'Access Category',
-                      value: data.accessCategory.isNotEmpty ? data.accessCategory : '—',
-                      accent: widget.accentColor,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
+        SizedBox(height: 12.h),
 
+        if (data.tasks.isEmpty)
+          _buildEmptyTasks()
+        else
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Column(
+              children: data.tasks
+                  .map((task) => _TaskCard(task: task, accent: widget.accentColor))
+                  .toList(),
+            ),
+          ),
         // ── Task Overview card ─────────────────────────────────────────────
         SizedBox(height: 16.h),
         Padding(
@@ -561,50 +513,98 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
           ),
         ],
 
-        // ── Tasks list ────────────────────────────────────────────────────
-        SizedBox(height: 20.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _SectionLabel(
-                title: 'Assigned Tasks',
-                icon: Icons.task_alt_rounded,
-                accent: widget.accentColor,
+        // ── Contact card ─────────────────────────────────────────────────────
+        SizedBox(height: 16.h),
+        Container(
+          margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: widget.accentColor.withOpacity(0.12),
+                blurRadius: 20.r,
+                offset: Offset(0, 8.h),
               ),
-              if (data.tasks.isNotEmpty)
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: widget.accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    '${data.tasks.length}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                      color: widget.accentColor,
-                    ),
-                  ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10.r,
+                offset: Offset(0, 2.h),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Card header strip
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
+                decoration: BoxDecoration(
+                  color: widget.accentColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
                 ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(6.w),
+                      decoration: BoxDecoration(
+                        color: widget.accentColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Icon(
+                        Icons.person_outline_rounded,
+                        size: 15.w,
+                        color: widget.accentColor,
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Text(
+                      'Contact Information',
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(18.w),
+                child: Column(
+                  children: [
+                    _ContactRow(
+                      icon: Icons.mail_outline_rounded,
+                      label: 'Email',
+                      value: data.email.isNotEmpty ? data.email : '—',
+                      accent: widget.accentColor,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
+                      child: Divider(height: 1, color: const Color(0xFFF0F0F5)),
+                    ),
+                    _ContactRow(
+                      icon: Icons.badge_outlined,
+                      label: 'Employee Code',
+                      value: data.employeeCode.isNotEmpty ? data.employeeCode : '—',
+                      accent: widget.accentColor,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
+                      child: Divider(height: 1, color: const Color(0xFFF0F0F5)),
+                    ),
+                    _ContactRow(
+                      icon: Icons.shield_outlined,
+                      label: 'Access Category',
+                      value: data.accessCategory.isNotEmpty ? data.accessCategory : '—',
+                      accent: widget.accentColor,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        SizedBox(height: 12.h),
-
-        if (data.tasks.isEmpty)
-          _buildEmptyTasks()
-        else
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Column(
-              children: data.tasks
-                  .map((task) => _TaskCard(task: task, accent: widget.accentColor))
-                  .toList(),
-            ),
-          ),
       ],
     );
   }

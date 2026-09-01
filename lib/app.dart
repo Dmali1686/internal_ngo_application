@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
               create: (_) => SuperAdminProvider(),
             ),
             ChangeNotifierProvider(
-              create: (_) => TaskProvider()..fetchAllTasks()..fetchAssignedTasks()..fetchMyTasks(),
+              create: (_) => TaskProvider(),
             ),
             ChangeNotifierProvider(
               create: (_) => PatientListProvider(),

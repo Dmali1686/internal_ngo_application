@@ -187,4 +187,25 @@ class UserApiService {
       rethrow;
     }
   }
+
+  /// Fetches unassigned users (users with no assignments).
+  ///
+  /// GET /api/v1/users/unassigned
+  Future<List<UserModel>> getUnassignedUsers() async {
+    try {
+      final response = await _client.get('/users/unassigned');
+      if (response.success && response.data != null) {
+        final List<dynamic> data = response.data is List
+            ? response.data
+            : (response.data['users'] ?? []);
+        return data
+            .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error('UserApiService', 'Failed to get unassigned users: $e');
+      rethrow;
+    }
+  }
 }

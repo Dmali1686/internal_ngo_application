@@ -2,28 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_exit_scope.dart';
 import '../models/super_admin_models.dart';
 import '../providers/super_admin_provider.dart';
-import '../../tasks/screens/admin_all_tasks_screen.dart';
+import '../../tasks/screens/tasks_dashboard_screen.dart';
+import '../../tasks/providers/task_provider.dart';
+import '../../tasks/screens/create_task_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import 'department_detail_screen.dart';
-import 'create_employee_screen.dart';
 import '../../patient_registration/screens/all_patients_screen.dart';
+import '../../../core/services/auth_storage_service.dart';
 import '../../qr_management/screens/qr_scanner_screen.dart';
-
-/// Screen 1 — Super Admin Management Dashboard
-class SuperAdminDashboardScreen extends StatefulWidget {
-  const SuperAdminDashboardScreen({super.key});
+/// Screen 1 — Admin Management Dashboard
+class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
 
   @override
-  State<SuperAdminDashboardScreen> createState() =>
-      _SuperAdminDashboardScreenState();
+  State<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
-class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentNavIndex = 0;
 
   @override
@@ -32,6 +32,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     // Fetch real departments when the dashboard opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SuperAdminProvider>().loadDepartments();
+      context.read<TaskProvider>().fetchMyTasks();
     });
   }
 
@@ -39,7 +40,20 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SuperAdminProvider>();
-    final stats = provider.stats;
+    
+    // Filter departments to only the one where the admin is assigned
+    final String? assignedDeptId = AuthStorageService().departmentId;
+    final adminDepartments = assignedDeptId != null
+        ? provider.departments.where((d) => d.id == assignedDeptId).toList()
+        : <DepartmentModel>[];
+
+    // Calculate stats based on assigned departments only
+    final stats = SuperAdminStats(
+      totalEmployees: adminDepartments.fold(0, (s, d) => s + d.totalEmployees),
+      totalDepartments: adminDepartments.length,
+      activeTasks: adminDepartments.fold(0, (s, d) => s + d.activeTasks),
+      completedTasks: adminDepartments.fold(0, (s, d) => s + d.completedTasks),
+    );
 
     return AppExitScope(
       currentTabIndex: _currentNavIndex,
@@ -65,19 +79,19 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                     children: [
                       _buildHeader(context),
                       _buildStatsCard(stats),
-                      _buildDepartmentsGrid(context, provider.departments),
+                      _buildDepartmentsGrid(context, adminDepartments),
                       SizedBox(height: 120.h),
                     ],
                   ),
                 ),
               ],
             ),
-            // Tab 1 — Create Employee
-            const CreateEmployeeScreen(),
+            // Tab 1 — Create Task
+            const CreateTaskScreen(),
             // Tab 2 — Animals List
             const AllPatientsScreen(),
-            // Tab 3 — All Tasks (SUP001 global view)
-            const AdminAllTasksScreen(),
+            // Tab 3 — My Tasks
+            const TasksDashboardScreen(),
             // Tab 4 — Profile (reuse existing screen)
             const ProfileScreen(),
           ],
@@ -173,7 +187,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                   ),
                 ),
                 Text(
-                  'Super Admin',
+                  'Admin',
                   style: GoogleFonts.poppins(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w800,
@@ -422,11 +436,11 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   // ── Bottom nav ─────────────────────────────────────────────────────────────
   Widget _buildBottomNav() {
     // NOTE: QR (index 4) opens a modal — it is NOT an IndexedStack tab.
-    // Nav indices: 0=Dashboard, 1=AddUser, 2=Animals, 3=Tasks, 4=QR(modal), 5=Profile
-    // IndexedStack indices: 0=Dashboard, 1=AddUser, 2=Animals, 3=Tasks, 4=Profile
+    // Nav indices: 0=Dashboard, 1=CreateTask, 2=Animals, 3=Tasks, 4=QR(modal), 5=Profile
+    // IndexedStack indices: 0=Dashboard, 1=CreateTask, 2=Animals, 3=Tasks, 4=Profile
     final items = [
       _NavItem(icon: Icons.home_rounded, label: 'Dashboard'),
-      _NavItem(icon: Icons.person_add_alt_1_rounded, label: 'Add User'),
+      _NavItem(icon: Icons.add_task_rounded, label: 'Create Task'),
       _NavItem(icon: Icons.pets_rounded, label: 'Animals'),
       _NavItem(icon: Icons.task_alt_rounded, label: 'Tasks'),
       _NavItem(icon: Icons.qr_code_scanner_rounded, label: 'Scan QR'),
@@ -457,6 +471,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
               final selected = !isQr && _currentNavIndex == stackIndex;
 
               if (isQr) {
+                // QR — special pill button
                 return GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
@@ -527,7 +542,6 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     );
   }
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Department Card — 2-col grid, centered icon + text (ModulesGrid style)

@@ -8,6 +8,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/paw_pattern_painter.dart';
+import '../../../core/services/auth_storage_service.dart';
 import '../services/auth_api_service.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
 
@@ -147,6 +148,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
+    debugPrint('====== DEBUG LOGIN ======');
+    debugPrint('Role: $_selectedRole');
+    debugPrint('Identifier: $identifier');
+    debugPrint('Password: $password');
+    debugPrint('=========================');
+
     AppLogger.action('LoginScreen', '--- LOGIN ATTEMPT ---');
     AppLogger.info('LoginScreen', 'Role: $_selectedRole | Identifier: $identifier');
 
@@ -156,6 +163,13 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
         role: _selectedRole,
       );
+
+      debugPrint('====== DEBUG LOGIN RESPONSE ======');
+      debugPrint('Success: ${response.success}');
+      debugPrint('Status Code: ${response.statusCode}');
+      debugPrint('Data: ${response.data}');
+      debugPrint('Error: ${response.errorMessage}');
+      debugPrint('==================================');
 
       AppLogger.info(
         'LoginScreen',
@@ -168,6 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // ✅ Credentials correct — navigate to dashboard
         AppLogger.info('LoginScreen', 'Login successful. Navigating...');
         context.read<SuperAdminProvider>().setRole(_selectedRole);
+        AuthStorageService().saveRole(_selectedRole); // persist role for app restart
         context.go('/dashboard-transition');
       } else {
         // ❌ Backend rejected credentials — show user-friendly message

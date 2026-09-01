@@ -100,11 +100,22 @@ class TaskProvider extends ChangeNotifier {
   Future<void> fetchDepartmentTasks(String departmentId) async {
     // For department details, we can either use 'all tasks' and filter locally or hit the API.
     // If the user is Super Admin, they can get all tasks. We'll filter allTasks locally.
-    await fetchAllTasks();
+    try {
+      await fetchAllTasks();
+    } catch (_) {
+      // If fetchAllTasks fails (e.g., Admin 403), fallback to assigned tasks
+    }
+    try {
+      await fetchAssignedTasks();
+    } catch (_) {}
   }
 
   List<TaskModel> getTasksForDepartment(String departmentId) {
-    return _allTasks.where((task) => task.department?.id == departmentId).toList();
+    if (_allTasks.isNotEmpty) {
+      return _allTasks.where((task) => task.department?.id == departmentId).toList();
+    }
+    // Fallback to assigned tasks if allTasks failed or we are admin
+    return _assignedTasks.where((task) => task.department?.id == departmentId).toList();
   }
 
   Future<bool> createTask({

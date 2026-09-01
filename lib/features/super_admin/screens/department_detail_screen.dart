@@ -62,15 +62,25 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
     _orgProvider = DepartmentOrgProvider();
     _orgProvider.load(widget.department.id);
     _loadAllUsers();
+    
+    // Fetch tasks for this department
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TaskProvider>().fetchDepartmentTasks(widget.department.id);
+    });
   }
 
   Future<void> _loadAllUsers() async {
     setState(() => _isLoadingUsers = true);
     try {
+      // Super Admin can fetch all users
       final users = await _userApiService.getAllUsers();
       if (mounted) setState(() => _allUsers = users);
     } catch (_) {
-      // Non-critical — gracefully degrade
+      // If unauthorized (Admin), fallback to fetching unassigned users
+      try {
+        final unassigned = await _userApiService.getUnassignedUsers();
+        if (mounted) setState(() => _allUsers = unassigned);
+      } catch (_) {}
     } finally {
       if (mounted) setState(() => _isLoadingUsers = false);
     }
@@ -92,7 +102,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundSurface,
-      floatingActionButton: provider.isSuperAdmin ? FloatingActionButton.extended(
+      floatingActionButton: !provider.isEmployee ? FloatingActionButton.extended(
         backgroundColor: color,
         onPressed: () {
           Navigator.push(

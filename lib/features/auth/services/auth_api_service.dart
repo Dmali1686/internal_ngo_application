@@ -24,11 +24,9 @@ class AuthApiService {
       endpoint = ApiEndpoints.authEmployeeLogin;
       body['username'] = identifier;
     } else if (role == 'Admin') {
-      // Assuming Admin uses a similar endpoint to Super Admin or has its own. 
-      // Falling back to employee login structure or super admin based on standard.
-      // We will map it to authAdminLogin if it exists, otherwise employee.
-      endpoint = ApiEndpoints.authAdminLogin;
-      body['username'] = identifier; // Adjust if backend expects email_or_mobile for Admin
+      // Using employee login API for Admin as requested.
+      endpoint = ApiEndpoints.authEmployeeLogin;
+      body['username'] = identifier;
     } else {
       // Super Admin
       endpoint = ApiEndpoints.authSuperAdminLogin;
@@ -68,6 +66,19 @@ class AuthApiService {
         userId: parsedUserId,
       );
       _authStorage.setIsDoctor(isDoc);
+      
+      // Fetch profile to get department_id and other details
+      try {
+        final profileRes = await getProfile();
+        if (profileRes.success && profileRes.data is Map) {
+          final profileMap = profileRes.data as Map;
+          if (profileMap['department_id'] != null) {
+            _authStorage.setDepartmentId(profileMap['department_id'].toString());
+          }
+        }
+      } catch (e) {
+        print('Failed to fetch profile during login: $e');
+      }
     }
 
     return response;
@@ -121,12 +132,21 @@ class AuthApiService {
 
   /// Get the current user's profile.
   /// `GET /api/v1/auth/me`
-  Future<ApiResponse<dynamic>> getProfile() {
+  Future<ApiResponse<dynamic>> getProfile() async {
     final userId = _authStorage.userId ?? '';
-    return _client.get(
+    final response = await _client.get(
       ApiEndpoints.authMe,
       extraHeaders: {'X-User-ID': userId},
     );
+    
+    if (response.success && response.data is Map) {
+      final data = response.data as Map;
+      if (data['department_id'] != null) {
+        _authStorage.setDepartmentId(data['department_id'].toString());
+      }
+    }
+    
+    return response;
   }
 
   /// Logout — clears stored tokens.

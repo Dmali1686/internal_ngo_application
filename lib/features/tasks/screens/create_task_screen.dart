@@ -154,7 +154,21 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Task created successfully!'), backgroundColor: Colors.green),
       );
-      Navigator.pop(context, true);
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context, true);
+      } else {
+        // We are in a tab, so just clear the form for the next task
+        _formProvider.titleController.clear();
+        _formProvider.descriptionController.clear();
+        _formProvider.setPriority('NORMAL');
+        _formProvider.setDueDate(null);
+        if (widget.initialAssigneeId == null) {
+          _formProvider.setAssigneeId(null);
+        }
+        if (widget.initialDepartmentId == null) {
+          _formProvider.setDepartmentId(null);
+        }
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -195,11 +209,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.sp),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      SizedBox(width: 8.w),
+                      if (Navigator.canPop(context)) ...[
+                        IconButton(
+                          icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.sp),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        SizedBox(width: 8.w),
+                      ],
                       Text(
                         'New Task',
                         style: GoogleFonts.poppins(

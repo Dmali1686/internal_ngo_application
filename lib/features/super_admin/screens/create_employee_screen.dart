@@ -26,6 +26,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
   
   bool _isLoading = false;
   bool _isLoadingData = true;
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
   // Data lists for dropdowns
   List<DepartmentItem> _departments = [];
@@ -124,6 +125,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
             setState(() {
               _assignments.clear();
               _assignments.add(_AssignmentState());
+              _autoValidateMode = AutovalidateMode.disabled;
             });
           }
         } else {
@@ -137,6 +139,19 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+      }
+    } else {
+      print('--- CreateEmployeeScreen validation failed ---');
+      if (mounted) {
+        setState(() {
+          _autoValidateMode = AutovalidateMode.onUserInteraction;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all required fields correctly.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -170,6 +185,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
               physics: const BouncingScrollPhysics(),
               child: Form(
                 key: _formKey,
+                autovalidateMode: _autoValidateMode,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -180,14 +196,14 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
                       controller: _fullNameCtrl,
                       label: 'Full Name',
                       icon: Icons.person_outline,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
                     SizedBox(height: 12.h),
                     _buildTextField(
                       controller: _usernameCtrl,
                       label: 'Username',
                       icon: Icons.alternate_email_rounded,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
                     SizedBox(height: 12.h),
                     _buildTextField(
@@ -196,8 +212,8 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
                           return 'Enter a valid email';
                         }
                         return null;
@@ -209,7 +225,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
                       label: 'Mobile',
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
                     SizedBox(height: 12.h),
                     _buildTextField(
@@ -218,8 +234,8 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
                       icon: Icons.lock_outline,
                       obscureText: true,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        if (v.length < 6) return 'Minimum 6 characters';
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (v.trim().length < 6) return 'Minimum 6 characters';
                         return null;
                       },
                     ),

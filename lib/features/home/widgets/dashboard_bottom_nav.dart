@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../qr_management/screens/qr_scanner_screen.dart';
 
 class DashboardBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -15,8 +16,6 @@ class DashboardBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomAppBar(
       color: Colors.white,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8.w,
       elevation: 10,
       child: Container(
         height: 60.h,
@@ -24,26 +23,57 @@ class DashboardBottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildNavItem(0, Icons.home, 'Home', isSelected: currentIndex == 0),
-            _buildNavItem(
-              1,
-              Icons.assignment,
-              'Tasks',
-              isSelected: currentIndex == 1,
-              badge: '8',
+            _buildNavItem(context, 0, Icons.home_rounded, 'Home', isSelected: currentIndex == 0),
+            _buildNavItem(context, 1, Icons.app_registration_rounded, 'Register', isSelected: currentIndex == 1),
+            // Center QR Scan button
+            _buildQrButton(context),
+            _buildNavItem(context, 2, Icons.pets_rounded, 'Animals', isSelected: currentIndex == 2),
+            _buildNavItem(context, 3, Icons.person_outline, 'Profile', isSelected: currentIndex == 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => const QrScannerScreen(),
+          ),
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2E8B57), Color(0xFF1a5c38)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30.r),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E8B57).withOpacity(0.35),
+              blurRadius: 8.r,
+              offset: Offset(0, 3.h),
             ),
-            SizedBox(width: 40.w), // Space for FAB
-            _buildNavItem(
-              2,
-              Icons.pets_rounded,
-              'Animals',
-              isSelected: currentIndex == 2,
-            ),
-            _buildNavItem(
-              3,
-              Icons.person_outline,
-              'Profile',
-              isSelected: currentIndex == 3,
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20.w),
+            SizedBox(width: 5.w),
+            Text(
+              'Scan QR',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -52,6 +82,7 @@ class DashboardBottomNav extends StatelessWidget {
   }
 
   Widget _buildNavItem(
+    BuildContext context,
     int index,
     IconData icon,
     String label, {

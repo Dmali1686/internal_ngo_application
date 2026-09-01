@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/voice_language_provider.dart';
+import '../../../core/widgets/app_exit_scope.dart';
 import '../../patient_registration/screens/all_patients_screen.dart';
+import '../../patient_registration/screens/registration_dashboard_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../tasks/screens/tasks_dashboard_screen.dart';
 import '../../super_admin/screens/super_admin_dashboard_screen.dart';
+import '../../super_admin/screens/admin_dashboard_screen.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
 
 // Extracted Widgets
@@ -34,6 +34,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // On every app launch (including restarts), restore the persisted role
+      // and refresh data from the backend. This fixes the black screen issue
+      // where the role was lost in memory after the app was closed.
+      context.read<SuperAdminProvider>().restoreFromStorage();
       _checkAndShowLanguageDialog();
     });
   }
@@ -115,48 +119,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isSuperAdmin = context.watch<SuperAdminProvider>().isSuperAdmin;
+    final provider = context.watch<SuperAdminProvider>();
+    final isSuperAdmin = provider.isSuperAdmin;
+    final isEmployee = provider.isEmployee;
+    final isAdmin = !isSuperAdmin && !isEmployee;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        SystemNavigator.pop();
-      },
-      child: isSuperAdmin 
-          ? const SuperAdminDashboardScreen()
-          : Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: [
-              _buildHomeTab(),
-              const TasksDashboardScreen(),
-              const AllPatientsScreen(),
-              const ProfileScreen(),
-            ],
-          ),
-        ],
+    // Super Admin and Admin have their own AppExitScope internally.
+    if (isSuperAdmin) return const SuperAdminDashboardScreen();
+    if (isAdmin) return const AdminDashboardScreen();
+
+    // ── Employee dashboard ────────────────────────────────────────────────────
+    return AppExitScope(
+      currentTabIndex: _currentIndex,
+      onGoToHomeTab: () => setState(() => _currentIndex = 0),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: _currentIndex,
+              children: [
+                _buildHomeTab(),
+                const RegistrationDashboardScreen(),
+                const AllPatientsScreen(),
+                const ProfileScreen(),
+              ],
+            ),
+          ],
+        ),
+        bottomNavigationBar: DashboardBottomNav(
+          currentIndex: _currentIndex,
+          onTabSelected: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/new-registration'),
-        backgroundColor: const Color(0xFF2E8B57),
-        shape: const CircleBorder(),
-        elevation: 2,
-        child: Icon(Icons.add, color: Colors.white, size: 28.w),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: DashboardBottomNav(
-        currentIndex: _currentIndex,
-        onTabSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-    ),
     );
   }
 

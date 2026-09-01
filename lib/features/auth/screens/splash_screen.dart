@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_storage_service.dart';
 
 /// Premium splash screen for MH14 Animal Hospital.
 ///
@@ -101,10 +102,21 @@ class _SplashScreenState extends State<SplashScreen>
     // Phase 4: Hold the splash for a full 5 seconds total before navigating
     await Future.delayed(const Duration(milliseconds: 3800));
     if (!mounted) return;
-    debugPrint('[DEBUG][SplashScreen] Phase 4: Navigating to /welcome');
-    AppLogger.info('SplashScreen', 'Splash complete — navigating to /welcome');
-    AppLogger.navigation('/welcome');
-    context.go('/welcome');
+
+    // Check if the user is already authenticated (token persisted from last session).
+    final authStorage = AuthStorageService();
+    if (authStorage.isAuthenticated) {
+      // User has a valid token — skip welcome/login and go straight to their dashboard.
+      debugPrint('[DEBUG][SplashScreen] Phase 4: User already authenticated — navigating to /dashboard-transition');
+      AppLogger.info('SplashScreen', 'Splash complete — user authenticated, navigating to dashboard');
+      AppLogger.navigation('/dashboard-transition');
+      context.go('/dashboard-transition');
+    } else {
+      debugPrint('[DEBUG][SplashScreen] Phase 4: No auth token — navigating to /welcome');
+      AppLogger.info('SplashScreen', 'Splash complete — navigating to /welcome');
+      AppLogger.navigation('/welcome');
+      context.go('/welcome');
+    }
   }
 
   @override

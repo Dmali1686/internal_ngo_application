@@ -14,7 +14,9 @@ class AuthStorageService {
   String? _accessToken;
   String? _refreshToken;
   String? _userId;
+  String? _departmentId;
   bool _isDoctor = false;
+  String? _role; // persisted role: 'Super Admin', 'Admin', 'Employee'
 
   /// The current access token (JWT).
   String? get accessToken => _accessToken;
@@ -25,8 +27,14 @@ class AuthStorageService {
   /// The current user ID.
   String? get userId => _userId;
 
+  /// The current user's department ID.
+  String? get departmentId => _departmentId;
+
   /// True if the currently logged in user is identified as a doctor.
   bool get isDoctor => _isDoctor;
+
+  /// The persisted role: 'Super Admin', 'Admin', or 'Employee'.
+  String? get role => _role;
 
   /// Whether the user is currently authenticated.
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
@@ -37,11 +45,24 @@ class AuthStorageService {
     _accessToken = prefs.getString('auth_access_token');
     _refreshToken = prefs.getString('auth_refresh_token');
     _userId = prefs.getString('auth_user_id');
+    _departmentId = prefs.getString('auth_department_id');
     _isDoctor = prefs.getBool('auth_is_doctor') ?? false;
+    _role = prefs.getString('auth_role'); // restore role on restart
   }
 
   void setIsDoctor(bool val) {
     _isDoctor = val;
+    _saveToPrefs();
+  }
+
+  void setDepartmentId(String id) {
+    _departmentId = id;
+    _saveToPrefs();
+  }
+
+  /// Persist the user role after successful login.
+  void saveRole(String role) {
+    _role = role;
     _saveToPrefs();
   }
 
@@ -70,7 +91,9 @@ class AuthStorageService {
     _accessToken = null;
     _refreshToken = null;
     _userId = null;
+    _departmentId = null;
     _isDoctor = false;
+    _role = null;
     _saveToPrefs();
   }
 
@@ -94,6 +117,18 @@ class AuthStorageService {
       await prefs.setString('auth_user_id', _userId!);
     } else {
       await prefs.remove('auth_user_id');
+    }
+    
+    if (_departmentId != null) {
+      await prefs.setString('auth_department_id', _departmentId!);
+    } else {
+      await prefs.remove('auth_department_id');
+    }
+
+    if (_role != null) {
+      await prefs.setString('auth_role', _role!);
+    } else {
+      await prefs.remove('auth_role');
     }
     
     await prefs.setBool('auth_is_doctor', _isDoctor);

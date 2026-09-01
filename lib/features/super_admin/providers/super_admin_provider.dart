@@ -3,6 +3,7 @@ import '../models/super_admin_models.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/services/auth_storage_service.dart';
 
 /// Holds Super Admin session state.
 ///
@@ -23,6 +24,20 @@ class SuperAdminProvider extends ChangeNotifier {
     _isEmployee = normalized == 'employee';
     if (_isSuperAdmin != wasSuperAdmin || _isEmployee != wasEmployee) {
       notifyListeners();
+    }
+  }
+
+  /// Called on app restart to restore role from persisted storage.
+  ///
+  /// Reads the role saved by [AuthStorageService.saveRole] and applies it
+  /// so the correct dashboard is shown without requiring re-login.
+  Future<void> restoreFromStorage() async {
+    final storedRole = AuthStorageService().role;
+    if (storedRole != null && storedRole.isNotEmpty) {
+      AppLogger.info('SuperAdminProvider', 'Restoring role from storage: $storedRole');
+      setRole(storedRole);
+      // Re-fetch live data from the backend for the restored session.
+      await loadDepartments();
     }
   }
 
