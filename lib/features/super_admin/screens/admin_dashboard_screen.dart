@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_exit_scope.dart';
+import '../../../core/services/auth_storage_service.dart';
 import '../models/super_admin_models.dart';
 import '../providers/super_admin_provider.dart';
 import '../../tasks/screens/tasks_dashboard_screen.dart';
@@ -12,8 +14,8 @@ import '../../tasks/screens/create_task_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import 'department_detail_screen.dart';
 import '../../patient_registration/screens/all_patients_screen.dart';
-import '../../../core/services/auth_storage_service.dart';
 import '../../qr_management/screens/qr_scanner_screen.dart';
+import '../../diet_management/providers/diet_provider.dart';
 /// Screen 1 — Admin Management Dashboard
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -81,6 +83,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         _buildHeader(context),
                         _buildStatsCard(stats),
                         _buildDepartmentsGrid(context, adminDepartments),
+                        SizedBox(height: 20.h),
+                        _buildDietQuickAccess(context),
                         SizedBox(height: 120.h),
                       ],
                     ),
@@ -386,6 +390,104 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Diet Management Quick Access (Admin + Medical HOD) ─────────────────────
+  Widget _buildDietQuickAccess(BuildContext context) {
+    final positionTitle = AuthStorageService().positionTitle ?? '';
+    // Show to all Admins; highlight role for Medical HOD
+    final isMedicalHod = positionTitle.toLowerCase().contains('medical') ||
+        positionTitle.toLowerCase().contains('hod');
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF065F46).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(Icons.restaurant_menu_rounded,
+                    size: 16.sp, color: const Color(0xFF065F46)),
+              ),
+              SizedBox(width: 10.w),
+              Text(
+                'Diet Management',
+                style: GoogleFonts.poppins(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMain,
+                ),
+              ),
+              if (isMedicalHod) ...[
+                SizedBox(width: 8.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF065F46).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    'Medical HOD',
+                    style: GoogleFonts.poppins(
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF065F46),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _DietActionCard(
+                  title: 'Default\nDiet Plans',
+                  subtitle: 'Manage auto-assignment rules',
+                  icon: Icons.rule_folder_rounded,
+                  color: const Color(0xFF0F4C81),
+                  onTap: () => context.push('/default-diet-plans'),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _DietActionCard(
+                  title: 'Patient\nDiet History',
+                  subtitle: 'View & add patient diets',
+                  icon: Icons.history_edu_rounded,
+                  color: const Color(0xFF065F46),
+                  onTap: () {
+                    // Navigates to diet history; patient must be selected via patient list
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                        'Select a patient first to view their diet history.',
+                        style: GoogleFonts.nunitoSans(color: Colors.white),
+                      ),
+                      backgroundColor: const Color(0xFF065F46),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r)),
+                      action: SnackBarAction(
+                        label: 'Go to Patients',
+                        textColor: Colors.white,
+                        onPressed: () => setState(() => _currentNavIndex = 2),
+                      ),
+                    ));
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -856,4 +958,78 @@ class _NavItem {
   final IconData icon;
   final String label;
   const _NavItem({required this.icon, required this.label});
+}
+
+// ── Diet Action Card ──────────────────────────────────────────────────────────
+
+class _DietActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _DietActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [color, color.withOpacity(0.75)],
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(icon, size: 20.sp, color: Colors.white),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1.2,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              subtitle,
+              style: GoogleFonts.nunitoSans(
+                fontSize: 10.sp,
+                color: Colors.white.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

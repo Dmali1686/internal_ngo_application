@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/text_to_speech_player.dart';
 import '../../../core/services/voice_service.dart';
+import '../../treatment/providers/treatment_provider.dart';
+import '../../medicines/providers/medicine_provider.dart';
+import '../../treatment/models/treatment_request_model.dart';
+import '../../medicines/models/medicine_model.dart';
+import '../../../core/utils/logger.dart';
 
 class DoctorMedicalOrdersScreen extends StatefulWidget {
-  const DoctorMedicalOrdersScreen({super.key});
+  final String? caseId;
+  const DoctorMedicalOrdersScreen({super.key, this.caseId});
 
   @override
   State<DoctorMedicalOrdersScreen> createState() =>
@@ -57,6 +64,19 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
   bool _isListening = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.caseId != null) {
+        context.read<TreatmentProvider>().fetchPatientByCaseId(widget.caseId!);
+      } else {
+        // Clear previous patient if navigated without case ID
+        // Note: this assumes we might want to clear it, but maybe just leave it
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
@@ -81,88 +101,197 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLightGray,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textMain,
-        title: Text(
-          'Medical Orders',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w700,
-            fontSize: 18.sp,
-            color: AppColors.textMain,
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              // Save logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Medical orders updated successfully'),
-                  backgroundColor: Color(0xFF34A853),
-                ),
-              );
-              context.pop();
-            },
-            icon: const Icon(Icons.check, color: Color(0xFF34A853)),
-            label: Text(
-              'Save',
+    return Consumer2<TreatmentProvider, MedicineProvider>(
+      builder: (context, treatmentProvider, medicineProvider, child) {
+        return Scaffold(
+          backgroundColor: AppColors.backgroundLightGray,
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: Colors.white,
+            foregroundColor: AppColors.textMain,
+            title: Text(
+              treatmentProvider.patient != null 
+                  ? 'Orders: ${treatmentProvider.patient!.cageNumber ?? 'Patient'}'
+                  : 'Medical Orders',
               style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF34A853),
-                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                fontSize: 18.sp,
+                color: AppColors.textMain,
               ),
             ),
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  context.pop();
+                },
+                icon: const Icon(Icons.close, color: Colors.grey),
+                label: Text(
+                  'Cancel',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                    fontSize: 15.sp,
+                  ),
+                ),
+              ),
+              SizedBox(width: 8.w),
+            ],
           ),
-          SizedBox(width: 8.w),
+          body: treatmentProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: EdgeInsets.all(16.w),
+                  children: [
+                    if (treatmentProvider.patient == null) ...[
+                      _buildManualCaseIdInput(treatmentProvider),
+                      SizedBox(height: 20.h),
+                    ],
+                    if (treatmentProvider.patient != null) ...[
+                      _buildPatientSummary(treatmentProvider.patient!),
+                      SizedBox(height: 20.h),
+                    ],
+                    _buildConditionSelector(),
+                    SizedBox(height: 20.h),
+                    _buildMedicalNoteInput(),
+                    SizedBox(height: 20.h),
+                    _buildMedicinesSection(medicineProvider),
+                    SizedBox(height: 20.h),
+                    _buildVitalsSection(),
+                    SizedBox(height: 24.h),
+                    _buildPastTimeline(),
+                    SizedBox(height: 32.h),
+          
+                    // Main Save Button
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        FocusScope.of(context).unfocus();
+                        
+                        if (_noteController.text.isEmpty && _medicines.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please add a diagnosis note or medicines.')),
+                          );
+                          return;
+                        }
+
+                        final request = TreatmentRequestModel(
+                          diagnosis: _noteController.text.isNotEmpty ? _noteController.text : _selectedCondition,
+                          medicines: _medicines.map((m) => TreatmentMedicineRequestModel(
+                            medicineId: m['medicineId'] ?? '',
+                            dosage: m['dosage'] ?? '',
+                            frequency: m['frequency'] ?? '',
+                            duration: m['duration'] ?? '',
+                          )).toList(),
+                        );
+                        
+                        final success = await treatmentProvider.submitTreatment(request);
+                        
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('All medical orders saved successfully'),
+                              backgroundColor: Color(0xFF34A853),
+                            ),
+                          );
+                          context.pop();
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(treatmentProvider.error ?? 'Failed to save orders'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(Icons.save, size: 20.sp, color: Colors.white),
+                      label: Text(
+                        'Save Full Orders',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF34A853),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 60.h),
+                  ],
+                ),
+        );
+      }
+    );
+  }
+
+  Widget _buildPatientSummary(patient) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Patient Details', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16.sp)),
+          SizedBox(height: 8.h),
+          Text('Case ID: ${patient.caseId}'),
+          Text('Animal: ${patient.animalType ?? 'Unknown'} • ${patient.gender ?? 'Unknown'}'),
+          if (patient.symptoms != null) Text('Symptoms: ${patient.symptoms}'),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.all(16.w),
-        children: [
-          _buildConditionSelector(),
-          SizedBox(height: 20.h),
-          _buildMedicalNoteInput(),
-          SizedBox(height: 20.h),
-          _buildMedicinesSection(),
-          SizedBox(height: 20.h),
-          _buildVitalsSection(),
-          SizedBox(height: 24.h),
-          _buildPastTimeline(),
-          SizedBox(height: 32.h),
+    );
+  }
 
-          // Main Save Button
-          ElevatedButton.icon(
-            onPressed: () {
-              FocusScope.of(context).unfocus();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('All medical orders saved successfully'),
-                  backgroundColor: Color(0xFF34A853),
+  Widget _buildManualCaseIdInput(TreatmentProvider provider) {
+    final TextEditingController manualCaseIdController = TextEditingController();
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('No Patient Loaded', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16.sp, color: Colors.red)),
+          SizedBox(height: 8.h),
+          Text('Please scan a QR code or enter a Case ID manually:', style: GoogleFonts.nunitoSans()),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: manualCaseIdController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. MH14-2026-000001',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 0),
+                  ),
                 ),
-              );
-            },
-            icon: Icon(Icons.save, size: 20.sp, color: Colors.white),
-            label: Text(
-              'Save Full Orders',
-              style: GoogleFonts.poppins(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF34A853),
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+              SizedBox(width: 8.w),
+              ElevatedButton(
+                onPressed: () {
+                  if (manualCaseIdController.text.isNotEmpty) {
+                    provider.fetchPatientByCaseId(manualCaseIdController.text.trim());
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF34A853)),
+                child: const Text('Load', style: TextStyle(color: Colors.white)),
               ),
-            ),
+            ],
           ),
-          SizedBox(height: 60.h),
+          if (provider.error != null) ...[
+            SizedBox(height: 8.h),
+            Text(provider.error!, style: const TextStyle(color: Colors.red)),
+          ]
         ],
       ),
     );
@@ -361,9 +490,11 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
     );
   }
 
-  void _showAddMedicineDialog() {
-    final nameController = TextEditingController();
+  void _showAddMedicineDialog(MedicineProvider medicineProvider) {
+    MedicineModel? selectedMedicine;
     final dosageController = TextEditingController();
+    final frequencyController = TextEditingController();
+    final durationController = TextEditingController();
 
     showDialog(
       context: context,
@@ -375,25 +506,63 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
             color: AppColors.textMain,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Medicine Name',
-                hintText: 'e.g. Doxycycline 100mg',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Autocomplete<MedicineModel>(
+                optionsBuilder: (TextEditingValue textEditingValue) async {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<MedicineModel>.empty();
+                  }
+                  
+                  // Small local debounce
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
+                  // Fetch directly from the Future
+                  return await medicineProvider.searchMedicinesFuture(textEditingValue.text);
+                },
+                displayStringForOption: (MedicineModel option) => option.name,
+                onSelected: (MedicineModel selection) {
+                  selectedMedicine = selection;
+                },
+                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                  return TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Search Medicine',
+                      hintText: 'e.g. Amoxicillin',
+                    ),
+                  );
+                },
               ),
-            ),
-            SizedBox(height: 12.h),
-            TextField(
-              controller: dosageController,
-              decoration: const InputDecoration(
-                labelText: 'Dosage & Instructions',
-                hintText: 'e.g. 1 Tab • Morning, Night • After meal',
+              SizedBox(height: 12.h),
+              TextField(
+                controller: dosageController,
+                decoration: const InputDecoration(
+                  labelText: 'Dosage',
+                  hintText: 'e.g. 10mg or 1 Tab',
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 12.h),
+              TextField(
+                controller: frequencyController,
+                decoration: const InputDecoration(
+                  labelText: 'Frequency',
+                  hintText: 'e.g. Twice a day',
+                ),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: durationController,
+                decoration: const InputDecoration(
+                  labelText: 'Duration',
+                  hintText: 'e.g. 5 Days',
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -402,12 +571,15 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (nameController.text.isNotEmpty &&
-                  dosageController.text.isNotEmpty) {
+              if (selectedMedicine != null && dosageController.text.isNotEmpty) {
                 setState(() {
                   _medicines.add({
-                    'name': nameController.text,
-                    'details': dosageController.text,
+                    'medicineId': selectedMedicine!.id,
+                    'name': selectedMedicine!.name,
+                    'dosage': dosageController.text,
+                    'frequency': frequencyController.text,
+                    'duration': durationController.text,
+                    'details': '${dosageController.text} • ${frequencyController.text} • ${durationController.text}',
                   });
                 });
                 Navigator.pop(context);
@@ -423,7 +595,7 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
     );
   }
 
-  Widget _buildMedicinesSection() {
+  Widget _buildMedicinesSection(MedicineProvider medicineProvider) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -453,7 +625,7 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
                 ),
               ),
               TextButton.icon(
-                onPressed: _showAddMedicineDialog,
+                onPressed: () => _showAddMedicineDialog(medicineProvider),
                 icon: Icon(Icons.add, size: 18.sp),
                 label: const Text('Add'),
               ),

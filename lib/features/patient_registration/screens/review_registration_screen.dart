@@ -6,12 +6,20 @@ import '../providers/registration_provider.dart';
 import '../models/patient_registration_model.dart';
 import '../services/patient_api_service.dart';
 
-class ReviewRegistrationScreen extends StatelessWidget {
+class ReviewRegistrationScreen extends StatefulWidget {
   const ReviewRegistrationScreen({super.key});
 
   @override
+  State<ReviewRegistrationScreen> createState() => _ReviewRegistrationScreenState();
+}
+
+class _ReviewRegistrationScreenState extends State<ReviewRegistrationScreen> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
-    final data = context.watch<RegistrationProvider>().data;
+    final provider = context.watch<RegistrationProvider>();
+    final data = provider.data;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -55,20 +63,20 @@ class ReviewRegistrationScreen extends StatelessWidget {
           }),
           SizedBox(height: 12.h),
           _buildReviewCard('Medical Assessment', Icons.monitor_heart, {
-            'Condition': data['condition'] ?? '',
-            'Injuries': data['injuries'] ?? '',
+            'Symptoms/Condition': data['condition'] ?? '',
+            if (data['diagnosis'] != null && data['diagnosis']!.isNotEmpty) 'Diagnosis': data['diagnosis']!,
+            if (data['tests'] != null && data['tests']!.isNotEmpty) 'Tests': data['tests']!,
             'Urgency': data['urgency'] ?? '',
           }),
           SizedBox(height: 12.h),
-          _buildReviewCard('Transport Details', Icons.directions_car, {
+          _buildReviewCard('Transport & Admission', Icons.directions_car, {
             'Method': data['transportMethod'] ?? '',
+            if (data['transporterContact'] != null && data['transporterContact']!.isNotEmpty) 'Contact': data['transporterContact']!,
+            if (data['cageNumber'] != null && data['cageNumber']!.isNotEmpty) 'Assigned Cage': data['cageNumber']!,
           }),
           SizedBox(height: 32.h),
           ElevatedButton(
-            onPressed: () {
-              // Simulate API call
-              context.push('/registration-success');
-            },
+            onPressed: _isLoading ? null : () => _submitRegistration(context, provider),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green[700],
               foregroundColor: Colors.white,
@@ -81,7 +89,9 @@ class ReviewRegistrationScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            child: const Text('Submit Registration'),
+            child: _isLoading 
+                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Submit Registration'),
           ),
         ],
       ),
@@ -151,5 +161,70 @@ class ReviewRegistrationScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _submitRegistration(BuildContext context, RegistrationProvider provider) async {
+    setState(() => _isLoading = true);
+
+    final data = provider.data;
+    double? weightParsed;
+    if (provider.weightController.text.isNotEmpty) {
+      weightParsed = double.tryParse(provider.weightController.text);
+    }
+
+    String mappedGender = 'UNKNOWN';
+    final g = data['gender']?.toString().toUpperCase() ?? '';
+    if (g == 'MALE' || g == 'FEMALE') {
+      mappedGender = g;
+    }
+
+    final request = PatientRegistrationRequest(
+      reporterName: data['reporterName'],
+      reporterMobile: data['reporterPhone'],
+      animalAddress: data['address'],
+      landmark: data['landmark'],
+      animalType: data['animalType'],
+      animalName: provider.animalNameController.text.isNotEmpty ? provider.animalNameController.text : null,
+      color: data['color'],
+      gender: mappedGender,
+      age: data['age'],
+      weight: weightParsed,
+      isSterilized: provider.isSterilized,
+      symptoms: data['condition'],
+      diagnosis: data['diagnosis'],
+      tests: data['tests'],
+      transportedBy: data['transportMethod'],
+      transporterContact: data['transporterContact'],
+      cageNumber: data['cageNumber'],
+    );
+
+    try {
+      final apiService = PatientApiService();
+      final response = await apiService.registerPatient(request: request);
+
+      if (response.success && mounted) {
+        context.push('/registration-success');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.errorMessage ?? 'Failed to register patient'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

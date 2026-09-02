@@ -62,6 +62,11 @@ class RegistrationProvider extends ChangeNotifier {
   final TextEditingController initialTreatmentController =
       TextEditingController();
   final FocusNode initialTreatmentFocus = FocusNode();
+  
+  final TextEditingController diagnosisController = TextEditingController();
+  final FocusNode diagnosisFocus = FocusNode();
+  final TextEditingController testsController = TextEditingController();
+  final FocusNode testsFocus = FocusNode();
   final TextEditingController medicineStartedController =
       TextEditingController();
   Map<String, bool> requiredTests = {
@@ -71,6 +76,12 @@ class RegistrationProvider extends ChangeNotifier {
     'Ultrasound': false,
   };
   String wardAssignment = '';
+
+  // Step 6: Transport Details (Extras)
+  final TextEditingController transporterContactController = TextEditingController();
+  final FocusNode transporterContactFocus = FocusNode();
+  final TextEditingController cageNumberController = TextEditingController();
+  final FocusNode cageNumberFocus = FocusNode();
 
   // Helpers to update state variables and notify listeners
   void setActiveVoiceField(String? val) {
@@ -227,18 +238,30 @@ class RegistrationProvider extends ChangeNotifier {
 
   void updateMedicalAssessment({
     required String condition,
-    required String injuries,
+    required String diagnosis,
+    required String tests,
     required String urgency,
   }) {
     _data['condition'] = condition;
-    _data['injuries'] = injuries;
+    _data['diagnosis'] = diagnosis;
+    _data['tests'] = tests;
     _data['urgency'] = urgency;
     symptomsController.text = condition;
+    diagnosisController.text = diagnosis;
+    testsController.text = tests;
     notifyListeners();
   }
 
-  void updateTransportDetails({required String method}) {
+  void updateTransportDetails({
+    required String method,
+    String? contact,
+    String? cage,
+  }) {
     _data['transportMethod'] = method;
+    _data['transporterContact'] = contact;
+    _data['cageNumber'] = cage;
+    if (contact != null) transporterContactController.text = contact;
+    if (cage != null) cageNumberController.text = cage;
     notifyListeners();
   }
 
@@ -258,9 +281,13 @@ class RegistrationProvider extends ChangeNotifier {
     colorController.clear();
     microchipController.clear();
     symptomsController.clear();
+    diagnosisController.clear();
+    testsController.clear();
     temperatureController.clear();
     initialTreatmentController.clear();
     medicineStartedController.clear();
+    transporterContactController.clear();
+    cageNumberController.clear();
     reporterPhotos.clear();
     priority = 'Normal';
     mapLocation = null;
@@ -312,10 +339,19 @@ class RegistrationProvider extends ChangeNotifier {
     microchipController.dispose();
     symptomsController.dispose();
     symptomsFocus.dispose();
+    diagnosisController.dispose();
+    diagnosisFocus.dispose();
+    testsController.dispose();
+    testsFocus.dispose();
     temperatureController.dispose();
     temperatureFocus.dispose();
     initialTreatmentController.dispose();
     initialTreatmentFocus.dispose();
+    medicineStartedController.dispose();
+    transporterContactController.dispose();
+    transporterContactFocus.dispose();
+    cageNumberController.dispose();
+    cageNumberFocus.dispose();
     medicineStartedController.dispose();
     super.dispose();
   }

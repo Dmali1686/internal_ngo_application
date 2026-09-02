@@ -118,12 +118,26 @@ class ApiEndpoints {
   // Diet Management
   // ---------------------------------------------------------------------------
 
-  /// GET / POST — diets for a patient.
-  static String patientDiets(String patientId) => '/patients/$patientId/diets';
+  /// GET — full diet history for a patient (DEFAULT + ADDITIONAL).
+  static String patientDietHistory(String patientId) =>
+      '/patients/$patientId/diet/history';
 
-  /// PATCH — update a specific diet.
-  static String updateDiet(String patientId, String dietId) =>
-      '/patients/$patientId/diets/$dietId';
+  /// POST — add an additional diet to a patient without replacing existing.
+  static String patientDietAdditional(String patientId) =>
+      '/patients/$patientId/diet/additional';
+
+  /// GET / POST — admin: view and create default diet plan rules.
+  static const String defaultDietPlans = '/diet/default-plans';
+
+  // ---------------------------------------------------------------------------
+  // Medicines
+  // ---------------------------------------------------------------------------
+
+  /// GET — paginated medicine master list (supports ?search=, ?page=, ?limit=).
+  static const String medicines = '/medicines';
+
+  /// GET — single medicine by ID.
+  static String medicineById(String id) => '/medicines/$id';
 
   // ---------------------------------------------------------------------------
   // Master Data

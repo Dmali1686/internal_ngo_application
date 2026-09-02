@@ -135,13 +135,9 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       ...provider.symptomTags,
       if (provider.symptomsController.text.isNotEmpty)
         provider.symptomsController.text,
+      // The _observations list from Step 3 Animal Details
+      ...provider.observations,
     ];
-
-    // Build tests string from selected tests
-    final selectedTests = provider.requiredTests.entries
-        .where((e) => e.value)
-        .map((e) => e.key)
-        .toList();
 
     // Build full address from address + city
     final addressParts = <String>[
@@ -178,13 +174,18 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           ? provider.mobileNumberController.text
           : 'N/A',
       symptoms: symptomParts.isNotEmpty ? symptomParts.join(', ') : null,
-      diagnosis: provider.initialTreatmentController.text.isNotEmpty
-          ? provider.initialTreatmentController.text
+      diagnosis: provider.diagnosisController.text.isNotEmpty
+          ? provider.diagnosisController.text
           : null,
-      tests: selectedTests.isNotEmpty ? selectedTests.join(', ') : null,
+      tests: provider.testsController.text.isNotEmpty 
+          ? provider.testsController.text 
+          : null,
       transportedBy: 'Ambulance',
-      transporterContact: provider.alternateNumberController.text.isNotEmpty
-          ? provider.alternateNumberController.text
+      transporterContact: provider.transporterContactController.text.isNotEmpty
+          ? provider.transporterContactController.text
+          : null,
+      cageNumber: provider.cageNumberController.text.isNotEmpty
+          ? provider.cageNumberController.text
           : null,
     );
 

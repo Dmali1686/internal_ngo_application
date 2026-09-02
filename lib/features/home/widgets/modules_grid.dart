@@ -187,7 +187,14 @@ class _ModuleCardState extends State<_ModuleCard>
       onTapCancel: _onTapCancel,
       onTap: () {
         if (widget.module.route != null) {
-          context.push(widget.module.route!);
+          // INTERCEPT: If the backend tells us to go to /animal-overview directly,
+          // intercept it and force the user to pick a patient from the list first.
+          // Otherwise, it opens a blank profile.
+          if (widget.module.route == '/animal-overview') {
+            context.push('/all-patients');
+          } else {
+            context.push(widget.module.route!);
+          }
         }
       },
       child: ScaleTransition(

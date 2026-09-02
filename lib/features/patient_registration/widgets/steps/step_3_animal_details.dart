@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -50,6 +51,8 @@ class Step3AnimalDetails extends StatelessWidget {
           _buildIdentificationHealth(context),
           SizedBox(height: 24.h),
           _buildStatusObservations(context),
+          SizedBox(height: 24.h),
+          _buildAdditionalInfo(context),
           SizedBox(height: 120.h),
         ],
       ),
@@ -238,14 +241,6 @@ class Step3AnimalDetails extends StatelessWidget {
               .toList(),
         ),
         SizedBox(height: 16.h),
-        Text(
-          'Breed / Mix',
-          style: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        SizedBox(height: 8.h),
         _buildTextField(
           'Breed / Mix',
           'e.g. Labrador, Persian, Mixed',
@@ -596,6 +591,65 @@ class Step3AnimalDetails extends StatelessWidget {
     );
   }
 
+  Widget _buildAdditionalInfo(BuildContext context) {
+    final formProvider = context.watch<RegistrationProvider>();
+    final voiceService = context.watch<VoiceService>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Additional Medical & Transport Info',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1B1C1C),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        _buildTextField(
+          'Diagnosis (Optional)',
+          'Enter suspected diagnosis if any',
+          formProvider.diagnosisController,
+          focusNode: formProvider.diagnosisFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'diagnosis',
+        ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Required Tests (Optional)',
+          'e.g. Blood Test, X-Ray',
+          formProvider.testsController,
+          focusNode: formProvider.testsFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'tests',
+        ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Transporter Contact (Optional)',
+          'Enter driver/volunteer contact',
+          formProvider.transporterContactController,
+          focusNode: formProvider.transporterContactFocus,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'transporterContact',
+        ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Assign Cage Number (Optional)',
+          'e.g. C-142',
+          formProvider.cageNumberController,
+          focusNode: formProvider.cageNumberFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'cageNumber',
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextField(
     String label,
     String hint,
@@ -605,6 +659,7 @@ class Step3AnimalDetails extends StatelessWidget {
     bool readOnly = false,
     IconData? icon,
     String? fieldKey,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Builder(
       builder: (context) {
@@ -668,6 +723,7 @@ class Step3AnimalDetails extends StatelessWidget {
                     controller: controller,
                     focusNode: focusNode,
                     keyboardType: keyboardType,
+                    inputFormatters: inputFormatters,
                     style: GoogleFonts.nunitoSans(
                       fontSize: 14.sp,
                       color: const Color(0xFF1B1C1C),

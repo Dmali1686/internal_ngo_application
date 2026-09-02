@@ -134,7 +134,9 @@ class DoctorPanelScreen extends StatelessWidget {
                     subtitle: 'Update condition, prescribe meds & vitals',
                     icon: Icons.medical_services_outlined,
                     accentColor: AppColors.softBlue,
-                    route: '/doctor-medical-orders',
+                    route: (patientData?['case_id'] != null && patientData!['case_id'].toString().isNotEmpty) 
+                        ? '/medical-orders/${patientData!['case_id']}' 
+                        : '/doctor-medical-orders',
                     status: 'Last updated today, 09:30 AM',
                     statusIcon: Icons.update_rounded,
                   ),
@@ -146,6 +148,10 @@ class DoctorPanelScreen extends StatelessWidget {
                     icon: Icons.restaurant_outlined,
                     accentColor: AppColors.warningOrange,
                     route: '/doctor-food-schedule',
+                    extra: {
+                      'patientId': patientData?['id']?.toString() ?? patientData?['case_id']?.toString(),
+                      'patientName': patientData?['animal_name']?.toString() ?? patientData?['animal_type']?.toString(),
+                    },
                     status: '4 slots scheduled',
                     statusIcon: Icons.schedule_rounded,
                   ),
@@ -313,13 +319,14 @@ class DoctorPanelScreen extends StatelessWidget {
     required IconData icon,
     required Color accentColor,
     required String route,
+    Object? extra,
     required String status,
     required IconData statusIcon,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(route),
+        onTap: () => context.push(route, extra: extra),
         borderRadius: BorderRadius.circular(18.r),
         child: Container(
           padding: EdgeInsets.all(18.w),

@@ -138,13 +138,13 @@ class _LoginScreenState extends State<LoginScreen> {
   String _getAccessIdForRole(String role) {
     switch (role) {
       case 'Super Admin':
-        return '8637ac1d-3bd3-45b1-9c0d-7d5cdf96c559';
+        return 'b4fc7beb-8d38-440e-b9e6-88e0e01cd4c6';
       case 'Admin':
-        return '77f14ddd-5818-4a37-9768-6afd2715929c';
+        return '1b8fc8a0-bcfd-4857-9854-1e48285dd4ba';
       case 'Employee':
-        return 'd166526c-330a-4f70-b2e2-b7eeae0d4056';
+        return '2c140a47-c9db-4bbb-b4db-45c87a848467';
       default:
-        return 'd166526c-330a-4f70-b2e2-b7eeae0d4056';
+        return '2c140a47-c9db-4bbb-b4db-45c87a848467';
     }
   }
 

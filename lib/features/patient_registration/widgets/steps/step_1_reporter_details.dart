@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -201,6 +202,10 @@ class Step1ReporterDetails extends StatelessWidget {
             formProvider.mobileNumberController,
             focusNode: formProvider.mobileNumberFocus,
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
             readOnly: voiceService.isVoiceModeActive,
             fieldKey: 'mobileNumber',
           ),
@@ -211,6 +216,10 @@ class Step1ReporterDetails extends StatelessWidget {
             formProvider.alternateNumberController,
             focusNode: formProvider.alternateNumberFocus,
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
             readOnly: voiceService.isVoiceModeActive,
             fieldKey: 'alternateNumber',
           ),
@@ -411,6 +420,7 @@ class Step1ReporterDetails extends StatelessWidget {
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     String? fieldKey,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Builder(
       builder: (context) {
@@ -466,6 +476,7 @@ class Step1ReporterDetails extends StatelessWidget {
                     controller: controller,
                     focusNode: focusNode,
                     keyboardType: keyboardType,
+                    inputFormatters: inputFormatters,
                     style: GoogleFonts.nunitoSans(
                       fontSize: 14.sp,
                       color: const Color(0xFF1B1C1C),

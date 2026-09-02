@@ -49,7 +49,7 @@ class DashboardModulesProvider extends ChangeNotifier {
       key: 'patient_history',
       title: 'Patient History',
       subtitle: 'View complete\ntreatment history',
-      route: '/animal-overview',
+      route: '/all-patients',
     ),
     const DashboardModuleModel(
       key: 'treatment_cycle',
