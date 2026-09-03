@@ -18,6 +18,8 @@ import 'features/treatment/providers/treatment_provider.dart';
 import 'features/medicines/providers/medicine_provider.dart';
 import 'features/diet_management/providers/diet_provider.dart';
 import 'features/food_dept/providers/food_dept_provider.dart';
+import 'features/notifications/providers/notification_provider.dart';
+import 'features/notifications/widgets/notification_popup_overlay.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -63,12 +65,20 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(
               create: (_) => FoodDeptProvider(),
             ),
+            ChangeNotifierProvider(
+              create: (_) => NotificationProvider(),
+            ),
           ],
           child: MaterialApp.router(
             title: AppStrings.appTitle,
             theme: AppTheme.lightTheme,
             routerConfig: appRouter,
             debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return NotificationPopupOverlay(
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
           ),
         );
       },

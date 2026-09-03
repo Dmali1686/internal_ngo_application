@@ -14,6 +14,8 @@ import 'create_employee_screen.dart';
 import '../../patient_registration/screens/all_patients_screen.dart';
 import '../../qr_management/screens/qr_scanner_screen.dart';
 import '../../diet_management/providers/diet_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
+import '../../notifications/screens/notification_center_screen.dart';
 
 /// Screen 1 — Super Admin Management Dashboard
 class SuperAdminDashboardScreen extends StatefulWidget {
@@ -127,29 +129,41 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Stack(
-                      children: [
-                        Icon(Icons.notifications_none, size: 28.w),
-                        Positioned(
-                          right: 2.w,
-                          top: 2.h,
-                          child: Container(
-                            padding: EdgeInsets.all(3.w),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '3',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 8.sp,
-                                fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationCenterScreen(),
+                          ),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          Icon(Icons.notifications_none, size: 28.w),
+                          if (context.watch<NotificationProvider>().unreadCount > 0)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: EdgeInsets.all(3.w),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  context.watch<NotificationProvider>().unreadCount > 9
+                                      ? '9+'
+                                      : '${context.watch<NotificationProvider>().unreadCount}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     SizedBox(width: 15.w),
                     // Local fallback avatar (no network call)

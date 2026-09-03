@@ -74,6 +74,7 @@ import '../../features/medicines/models/medicine_model.dart';
 import '../../features/treatment/screens/qr_scanner_screen.dart' as treatment_qr;
 import '../../features/food_dept/screens/food_dept_task_screen.dart';
 import 'package:provider/provider.dart';
+import '../../features/notifications/screens/notification_center_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -401,6 +402,11 @@ final GoRouter appRouter = GoRouter(
           child: const ComposePublicPostScreen(),
         );
       },
+    ),
+    // ── Notifications route ──────────────────────────────────────────────────
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationCenterScreen(),
     ),
     // ── Food Department routes ──────────────────────────────────────────────
     GoRoute(
