@@ -422,19 +422,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       SizedBox(height: 12.h),
 
                       _buildModuleCard(
-                        icon: Icons.cleaning_services_outlined,
-                        title: 'Cleaning Updates',
-                        subtitle: 'Cage hygiene, grooming & sanitation',
-                        color: const Color(0xFF14B8A6),
-                        latestUpdate: 'Cage cleaned & disinfected',
-                        time: 'Today, 07:15 AM',
-                        badge: 'Done',
-                        badgeColor: const Color(0xFF34A853),
-                        onTap: () => context.push('/cleaning-dashboard'),
-                      ),
-                      SizedBox(height: 12.h),
-
-                      _buildModuleCard(
                         icon: Icons.history_outlined,
                         title: 'Patient History',
                         subtitle: 'Recovery timeline & past records',
@@ -443,7 +430,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         time: 'Yesterday, 14:00 PM',
                         badge: '5 Records',
                         badgeColor: const Color(0xFF8B5CF6),
-                        onTap: () => context.push('/animal-overview'),
+                        onTap: () => context.push(
+                          '/animal-overview',
+                          extra: Map<String, dynamic>.from(_patientData),
+                        ),
                       ),
                       SizedBox(height: 24.h),
 

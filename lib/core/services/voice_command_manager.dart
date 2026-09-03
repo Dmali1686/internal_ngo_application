@@ -179,8 +179,10 @@ class VoiceCommandManager {
         'animal history',
         'animal profile',
       ],
-      confirmation: 'Opening animal overview',
-      action: (ctx) => appRouter.push('/animal-overview'),
+      confirmation: 'Opening QR scanner to look up patient',
+      // No patient context is available via voice — route to the QR scanner
+      // so the user can scan / search for the correct patient first.
+      action: (ctx) => appRouter.push('/scan-qr'),
     ),
     _VoiceCommand(
       keywords: ['scan', 'qr'],

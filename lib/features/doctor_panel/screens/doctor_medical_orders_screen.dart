@@ -31,13 +31,7 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
     'Ready for Release',
   ];
 
-  final List<Map<String, String>> _medicines = [
-    {
-      'name': 'Doxycycline 100mg',
-      'details': '1 Tab • Morning, Night • After meal',
-    },
-    {'name': 'Prednisolone 5mg', 'details': '1/2 Tab • Morning • After meal'},
-  ];
+  final List<Map<String, String>> _medicines = [];
 
   final Map<String, String> _vitalsFreq = {
     'Temp': 'Twice daily',
@@ -45,20 +39,7 @@ class _DoctorMedicalOrdersScreenState extends State<DoctorMedicalOrdersScreen> {
     'Weight': 'Weekly',
   };
 
-  final List<Map<String, String>> _pastNotes = [
-    {
-      'date': 'Yesterday, 10:00 AM',
-      'doctor': 'Dr. Sarah',
-      'note':
-          'Swelling has reduced significantly. Wound is healing well. Changed bandage. Continue current antibiotics.',
-    },
-    {
-      'date': 'Oct 24, 02:30 PM',
-      'doctor': 'Dr. Sarah',
-      'note':
-          'Initial assessment post-surgery. Patient is stable but weak. Starting IV fluids and antibiotics.',
-    },
-  ];
+  final List<Map<String, String>> _pastNotes = [];
 
   final VoiceService _voiceService = VoiceService();
   bool _isListening = false;
