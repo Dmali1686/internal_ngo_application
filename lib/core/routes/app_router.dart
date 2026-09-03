@@ -72,6 +72,7 @@ import '../../features/medicines/screens/medicines_list_screen.dart';
 import '../../features/medicines/screens/add_edit_medicine_screen.dart';
 import '../../features/medicines/models/medicine_model.dart';
 import '../../features/treatment/screens/qr_scanner_screen.dart' as treatment_qr;
+import '../../features/food_dept/screens/food_dept_task_screen.dart';
 import 'package:provider/provider.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -400,6 +401,11 @@ final GoRouter appRouter = GoRouter(
           child: const ComposePublicPostScreen(),
         );
       },
+    ),
+    // ── Food Department routes ──────────────────────────────────────────────
+    GoRoute(
+      path: '/food-dept-tasks',
+      builder: (context, state) => const FoodDeptTaskScreen(),
     ),
   ],
 );

@@ -21,12 +21,6 @@ class Step1ReporterDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 16.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [_buildRequestIdBadge(), _buildEmergencyToggle(context)],
-          ),
-          SizedBox(height: 24.h),
           _buildPersonalInformationForm(context),
           SizedBox(height: 120.h),
         ],
@@ -34,91 +28,7 @@ class Step1ReporterDetails extends StatelessWidget {
     );
   }
 
-  Widget _buildEmergencyToggle(BuildContext context) {
-    final formProvider = context.watch<RegistrationProvider>();
-    final isEmergency = formProvider.isEmergency;
 
-    return GestureDetector(
-      onTap: () {
-        formProvider.updateIsEmergency(!isEmergency);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isEmergency
-              ? const Color(0xFFEF4444).withOpacity(0.1)
-              : Colors.grey.shade100,
-          border: Border.all(
-            color: isEmergency ? const Color(0xFFEF4444) : Colors.grey.shade300,
-          ),
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.warning_rounded,
-              color: isEmergency
-                  ? const Color(0xFFEF4444)
-                  : Colors.grey.shade500,
-              size: 16.w,
-            ),
-            SizedBox(width: 8.w),
-            Text(
-              'Emergency',
-              style: GoogleFonts.nunitoSans(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-                color: isEmergency
-                    ? const Color(0xFFB91C1C)
-                    : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRequestIdBadge() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFF4CAF50).withOpacity(0.1),
-        border: Border.all(color: const Color(0xFF4CAF50)),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.fingerprint, color: const Color(0xFF006E1C), size: 16.w),
-          SizedBox(width: 12.w),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'RESCUE REQUEST ID',
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF006E1C).withOpacity(0.7),
-                  letterSpacing: 1,
-                ),
-              ),
-              Text(
-                'REQ-2023-8942',
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF003C0B),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildPersonalInformationForm(BuildContext context) {
     final formProvider = context.watch<RegistrationProvider>();

@@ -353,6 +353,16 @@ class Step3AnimalDetails extends StatelessWidget {
             ),
           ],
         ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Temperature (°F)',
+          'e.g. 101.5',
+          formProvider.temperatureController,
+          focusNode: formProvider.temperatureFocus,
+          keyboardType: TextInputType.number,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'temperature',
+        ),
       ],
     );
   }
@@ -607,8 +617,8 @@ class Step3AnimalDetails extends StatelessWidget {
         ),
         SizedBox(height: 12.h),
         _buildTextField(
-          'Diagnosis (Optional)',
-          'Enter suspected diagnosis if any',
+          'Diagnosis',
+          'Enter suspected diagnosis',
           formProvider.diagnosisController,
           focusNode: formProvider.diagnosisFocus,
           readOnly: voiceService.isVoiceModeActive,

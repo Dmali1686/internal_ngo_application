@@ -64,7 +64,7 @@ class DietApiService {
             final item = d.items[j];
             AppLogger.info(
               'DietApiService',
-              '       item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | freq=${item.frequency}',
+              '       item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | slot=${item.slot}',
             );
           }
         }
@@ -137,7 +137,7 @@ class DietApiService {
           final item = diet.items[j];
           AppLogger.info(
             'DietApiService',
-            '   item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | freq=${item.frequency}',
+            '   item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | slot=${item.slot}',
           );
         }
 
@@ -203,7 +203,7 @@ class DietApiService {
             final item = p.items[j];
             AppLogger.info(
               'DietApiService',
-              '       item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | freq=${item.frequency}',
+              '       item[${j + 1}] food="${item.foodItem?.name ?? item.foodItemId}" | qty=${item.quantity} | slot=${item.slot}',
             );
           }
         }

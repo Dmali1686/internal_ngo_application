@@ -4,14 +4,25 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../food_dept/screens/food_dept_task_screen.dart';
+import '../../food_dept/providers/food_dept_provider.dart';
 import '../screens/department_tasks_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // My Departments — vertical list of horizontal department cards.
-// Only shows departments that have tasks assigned to this employee.
-// Tapping a card navigates to DepartmentTasksScreen.
+//
+// Shows EVERY department the employee belongs to, regardless of whether tasks
+// have been assigned yet. This means a newly created employee always sees their
+// department card the moment they log in.
+//
+// Data sources (in priority order):
+//   1. API response  — DepartmentTaskGroup list from GET /tasks/my
+//      (contains real task counts for known departments)
+//   2. Auth storage  — departmentId + departmentName saved at login
+//      (used as a fallback when the API returns no departments, e.g. 0 tasks)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class EmployeeDepartmentsGrid extends StatefulWidget {
@@ -68,13 +79,44 @@ class _EmployeeDepartmentsGridState extends State<EmployeeDepartmentsGrid> {
       );
     }
 
-    // Only show departments that have at least one task
-    final List<DepartmentTaskGroup> activeDepts = grouped?.departments
-            .where((d) => d.tasks.isNotEmpty)
-            .toList() ??
-        [];
+    // ── Build the department list ─────────────────────────────────────────────
+    //
+    // Start with all departments returned from the API (they may have 0 tasks
+    // if the backend returns the bucket with an empty tasks array).
+    final List<DepartmentTaskGroup> apiDepts =
+        grouped?.departments.toList() ?? [];
 
-    if (activeDepts.isEmpty) return const SizedBox.shrink();
+    // Ensure the employee's own department always appears, even when the API
+    // returned no department buckets at all (e.g. brand new employee, 0 tasks).
+    final auth = AuthStorageService();
+    final storedDeptId = auth.departmentId;
+    final storedDeptName = auth.departmentName;
+
+    // Decide whether we need to inject a fallback card.
+    final apiHasStoredDept = storedDeptId == null ||
+        storedDeptId.isEmpty ||
+        apiDepts.any((d) => d.departmentId == storedDeptId);
+
+    final List<DepartmentTaskGroup> displayDepts = List.from(apiDepts);
+
+    if (!apiHasStoredDept) {
+      // The employee's department wasn't returned by the API — inject a
+      // placeholder group with 0 tasks so the card still renders.
+      final fallbackName = storedDeptName ??
+          _inferDeptNameFromPosition(auth.positionTitle ?? '');
+      displayDepts.insert(
+        0,
+        DepartmentTaskGroup(
+          departmentId: storedDeptId,
+          departmentCode: '',
+          departmentName: fallbackName,
+          tasks: const [],
+        ),
+      );
+    }
+
+    // If there's absolutely nothing to show, render nothing.
+    if (displayDepts.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -99,14 +141,33 @@ class _EmployeeDepartmentsGridState extends State<EmployeeDepartmentsGrid> {
               mainAxisSpacing: 14.h,
               childAspectRatio: 0.9,
             ),
-            itemCount: activeDepts.length,
+            itemCount: displayDepts.length,
             itemBuilder: (context, index) {
-              return _DepartmentCard(dept: activeDepts[index]);
+              return _DepartmentCard(dept: displayDepts[index]);
             },
           ),
         ],
       ),
     );
+  }
+
+  /// Infer a human-readable department name from the position title when
+  /// `department_name` wasn't returned by the backend profile API.
+  String _inferDeptNameFromPosition(String positionTitle) {
+    final p = positionTitle.toLowerCase();
+    if (p.contains('food') || p.contains('cook')) return 'Food Department';
+    if (p.contains('medic') || p.contains('vet') || p.contains('doctor')) {
+      return 'Medical Department';
+    }
+    if (p.contains('transport') || p.contains('rescue') ||
+        p.contains('ambulan') || p.contains('driver') ||
+        p.contains('catch')) {
+      return 'Transport / Rescue';
+    }
+    if (p.contains('clean')) return 'Cleaning Department';
+    if (p.contains('admin')) return 'Administration';
+    if (positionTitle.isNotEmpty) return positionTitle; // use raw title as fallback
+    return 'My Department';
   }
 }
 
@@ -147,7 +208,8 @@ class _DepartmentCard extends StatelessWidget {
     final icon = _iconForDept(dept.departmentName);
 
     final activeTasks = dept.tasks
-        .where((t) => t.status.toUpperCase() != 'COMPLETED' &&
+        .where((t) =>
+            t.status.toUpperCase() != 'COMPLETED' &&
             t.status.toUpperCase() != 'CANCELLED')
         .length;
     final urgentTasks = dept.tasks
@@ -156,16 +218,38 @@ class _DepartmentCard extends StatelessWidget {
             t.status.toUpperCase() != 'COMPLETED')
         .length;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DepartmentTasksScreen(
-            departmentName: dept.departmentName,
-            tasks: dept.tasks,
+    final hasNoTasks = dept.tasks.isEmpty;
+
+    // ── Food Dept cards open the feeding schedule screen ─────────────────
+    final deptLower = dept.departmentName.toLowerCase();
+    final isFoodDept = deptLower.contains('food') || deptLower.contains('cook');
+
+    void handleTap() {
+      if (isFoodDept) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => ChangeNotifierProvider.value(
+              value: ctx.read<FoodDeptProvider>(),
+              child: const FoodDeptTaskScreen(),
+            ),
           ),
-        ),
-      ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DepartmentTasksScreen(
+              departmentName: dept.departmentName,
+              tasks: dept.tasks,
+            ),
+          ),
+        );
+      }
+    }
+
+    return GestureDetector(
+      onTap: handleTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
         decoration: BoxDecoration(
@@ -173,7 +257,7 @@ class _DepartmentCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: Offset(0, 4.h),
             ),
@@ -191,7 +275,7 @@ class _DepartmentCard extends StatelessWidget {
                   width: 48.w,
                   height: 48.w,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14.r),
                   ),
                   child: Icon(icon, color: color, size: 24.w),
@@ -200,7 +284,7 @@ class _DepartmentCard extends StatelessWidget {
                   width: 28.w,
                   height: 28.w,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
+                    color: color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(Icons.chevron_right_rounded, color: color, size: 18.w),
@@ -220,32 +304,53 @@ class _DepartmentCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: 6.h),
-            Text(
-              '$activeTasks Active Task${activeTasks == 1 ? '' : 's'}',
-              style: GoogleFonts.nunitoSans(
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-              ),
-            ),
-            if (urgentTasks > 0) ...[
-              SizedBox(height: 3.h),
+            if (hasNoTasks)
+              // ── No tasks yet — show a welcoming "ready" label ──────────
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.priority_high_rounded,
+                  Icon(Icons.check_circle_outline_rounded,
                       size: 11.w,
-                      color: const Color(0xFFEF4444)),
-                  SizedBox(width: 2.w),
+                      color: AppColors.primaryGreen),
+                  SizedBox(width: 4.w),
                   Text(
-                    '$urgentTasks Urgent',
+                    'No tasks yet',
                     style: GoogleFonts.nunitoSans(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFEF4444),
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryGreen,
                     ),
                   ),
                 ],
+              )
+            else ...[
+              Text(
+                '$activeTasks Active Task${activeTasks == 1 ? '' : 's'}',
+                style: GoogleFonts.nunitoSans(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
               ),
+              if (urgentTasks > 0) ...[
+                SizedBox(height: 3.h),
+                Row(
+                  children: [
+                    Icon(Icons.priority_high_rounded,
+                        size: 11.w,
+                        color: const Color(0xFFEF4444)),
+                    SizedBox(width: 2.w),
+                    Text(
+                      '$urgentTasks Urgent',
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFEF4444),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),

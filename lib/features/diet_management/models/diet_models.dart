@@ -1,4 +1,4 @@
-/// Diet Management data models matching the backend Swagger spec.
+/// Diet Management data models matching the backend API spec.
 ///
 /// Endpoints covered:
 ///   GET  /api/v1/diet/default-plans
@@ -47,7 +47,7 @@ class PatientDietItem {
   final String id;
   final String? foodItemId;
   final FoodItem? foodItem;
-  final String? frequency;
+  final String? slot; // "MORNING" | "AFTERNOON" | "EVENING"
   final double quantity;
   final String? instructions;
   final String? patientDietId;
@@ -57,7 +57,7 @@ class PatientDietItem {
     required this.id,
     this.foodItemId,
     this.foodItem,
-    this.frequency,
+    this.slot,
     required this.quantity,
     this.instructions,
     this.patientDietId,
@@ -71,7 +71,7 @@ class PatientDietItem {
       foodItem: json['food_item'] != null
           ? FoodItem.fromJson(json['food_item'] as Map<String, dynamic>)
           : null,
-      frequency: json['frequency'] as String?,
+      slot: json['slot'] as String?,
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       instructions: json['instructions'] as String?,
       patientDietId: json['patient_diet_id'] as String?,
@@ -80,16 +80,74 @@ class PatientDietItem {
   }
 }
 
+/// Grouped meal items from the `meals` object in the diet history response.
+///
+/// Backend response structure:
+/// ```json
+/// {
+///   "meals": {
+///     "morning":   [ { PatientDietItem }, ... ],
+///     "afternoon": [ { PatientDietItem }, ... ],
+///     "evening":   [ { PatientDietItem }, ... ]
+///   }
+/// }
+/// ```
+class DietMeals {
+  final List<PatientDietItem> morning;
+  final List<PatientDietItem> afternoon;
+  final List<PatientDietItem> evening;
+
+  const DietMeals({
+    required this.morning,
+    required this.afternoon,
+    required this.evening,
+  });
+
+  /// All items across all slots as a flat list (for backward-compatible UI).
+  List<PatientDietItem> get allItems => [...morning, ...afternoon, ...evening];
+
+  bool get isEmpty => morning.isEmpty && afternoon.isEmpty && evening.isEmpty;
+
+  factory DietMeals.fromJson(Map<String, dynamic> json) {
+    List<PatientDietItem> _parseList(dynamic raw) {
+      if (raw == null) return [];
+      return (raw as List<dynamic>)
+          .map((e) => PatientDietItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    return DietMeals(
+      morning: _parseList(json['morning']),
+      afternoon: _parseList(json['afternoon']),
+      evening: _parseList(json['evening']),
+    );
+  }
+
+  /// Empty meals object for diets that use the legacy flat `items` array.
+  static const DietMeals empty = DietMeals(
+    morning: [],
+    afternoon: [],
+    evening: [],
+  );
+}
+
 class PatientDiet {
   final String id;
   final String? patientId;
   final String? status;       // ACTIVE | REPLACED | COMPLETED | CANCELLED
   final String? dietSource;   // DEFAULT | OVERRIDE | ADDITIONAL
+  final String? description;  // Optional overarching note for ADDITIONAL diets
   final String? startDate;
   final String? endDate;
   final String? createdBy;
   final String? createdAt;
   final String? updatedAt;
+
+  /// New nested meal structure (from `meals` key in response).
+  final DietMeals meals;
+
+  /// Legacy flat list — populated when backend sends `items` directly.
+  /// Prefer using [meals.allItems] in UI code.
   final List<PatientDietItem> items;
 
   const PatientDiet({
@@ -97,11 +155,13 @@ class PatientDiet {
     this.patientId,
     this.status,
     this.dietSource,
+    this.description,
     this.startDate,
     this.endDate,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
+    required this.meals,
     required this.items,
   });
 
@@ -109,18 +169,29 @@ class PatientDiet {
   bool get isDefault => dietSource?.toUpperCase() == 'DEFAULT';
   bool get isAdditional => dietSource?.toUpperCase() == 'ADDITIONAL';
 
+  /// All diet items regardless of whether they came from `meals` or `items`.
+  List<PatientDietItem> get allItems =>
+      meals.isEmpty ? items : meals.allItems;
+
   factory PatientDiet.fromJson(Map<String, dynamic> json) {
+    // Support both the new `meals` structure and the legacy flat `items` array.
+    final rawMeals = json['meals'];
     final rawItems = json['items'] as List<dynamic>? ?? [];
+
     return PatientDiet(
       id: json['id'] as String? ?? '',
       patientId: json['patient_id'] as String?,
       status: json['status'] as String?,
       dietSource: json['diet_source'] as String?,
+      description: json['description'] as String?,
       startDate: json['start_date'] as String?,
       endDate: json['end_date'] as String?,
       createdBy: json['created_by'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
+      meals: rawMeals != null
+          ? DietMeals.fromJson(rawMeals as Map<String, dynamic>)
+          : DietMeals.empty,
       items: rawItems
           .map((e) => PatientDietItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -136,7 +207,7 @@ class DefaultDietPlanItem {
   final String id;
   final String? foodItemId;
   final FoodItem? foodItem;
-  final String? frequency;
+  final String? slot; // "MORNING" | "AFTERNOON" | "EVENING"
   final double quantity;
   final String? instructions;
   final String? planId;
@@ -146,7 +217,7 @@ class DefaultDietPlanItem {
     required this.id,
     this.foodItemId,
     this.foodItem,
-    this.frequency,
+    this.slot,
     required this.quantity,
     this.instructions,
     this.planId,
@@ -160,7 +231,7 @@ class DefaultDietPlanItem {
       foodItem: json['food_item'] != null
           ? FoodItem.fromJson(json['food_item'] as Map<String, dynamic>)
           : null,
-      frequency: json['frequency'] as String?,
+      slot: json['slot'] as String?,
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       instructions: json['instructions'] as String?,
       planId: json['plan_id'] as String?,
@@ -230,20 +301,20 @@ class DefaultDietPlan {
 class AdditionalDietItemRequest {
   final String foodItemId;
   final double quantity;
-  final String frequency; // ONCE_DAILY | TWICE_DAILY | THREE_TIMES_DAILY
+  final String slot; // "MORNING" | "AFTERNOON" | "EVENING"
   final String? instructions;
 
   const AdditionalDietItemRequest({
     required this.foodItemId,
     required this.quantity,
-    required this.frequency,
+    required this.slot,
     this.instructions,
   });
 
   Map<String, dynamic> toJson() => {
         'food_item_id': foodItemId,
         'quantity': quantity,
-        'frequency': frequency,
+        'slot': slot,
         if (instructions != null && instructions!.isNotEmpty)
           'instructions': instructions,
       };
@@ -252,15 +323,19 @@ class AdditionalDietItemRequest {
 class CreateAdditionalDietRequest {
   final String startDate;
   final String? endDate;
+  final String? description;
   final List<AdditionalDietItemRequest> items;
 
   const CreateAdditionalDietRequest({
     required this.startDate,
     this.endDate,
+    this.description,
     required this.items,
   });
 
   Map<String, dynamic> toJson() => {
+        if (description != null && description!.isNotEmpty)
+          'description': description,
         'start_date': startDate,
         if (endDate != null && endDate!.isNotEmpty) 'end_date': endDate,
         'items': items.map((e) => e.toJson()).toList(),
@@ -270,20 +345,20 @@ class CreateAdditionalDietRequest {
 class DefaultDietPlanItemRequest {
   final String foodItemId;
   final double quantity;
-  final String frequency;
+  final String slot; // "MORNING" | "AFTERNOON" | "EVENING"
   final String? instructions;
 
   const DefaultDietPlanItemRequest({
     required this.foodItemId,
     required this.quantity,
-    required this.frequency,
+    required this.slot,
     this.instructions,
   });
 
   Map<String, dynamic> toJson() => {
         'food_item_id': foodItemId,
         'quantity': quantity,
-        'frequency': frequency,
+        'slot': slot,
         if (instructions != null && instructions!.isNotEmpty)
           'instructions': instructions,
       };
@@ -332,32 +407,46 @@ class CreateDefaultDietPlanRequest {
 // Enums as constants
 // ---------------------------------------------------------------------------
 
-class DietFrequency {
-  DietFrequency._();
-  static const String onceDaily = 'ONCE_DAILY';
-  static const String twiceDaily = 'TWICE_DAILY';
-  static const String threeTimesDaily = 'THREE_TIMES_DAILY';
+/// Diet meal slots — replaces the old DietFrequency class.
+class DietSlot {
+  DietSlot._();
+  static const String morning   = 'MORNING';
+  static const String afternoon = 'AFTERNOON';
+  static const String evening   = 'EVENING';
 
-  static const List<String> all = [onceDaily, twiceDaily, threeTimesDaily];
+  static const List<String> all = [morning, afternoon, evening];
 
   static String label(String value) {
-    switch (value) {
-      case onceDaily:
-        return 'Once Daily';
-      case twiceDaily:
-        return 'Twice Daily';
-      case threeTimesDaily:
-        return '3× Daily';
+    switch (value.toUpperCase()) {
+      case 'MORNING':
+        return 'Morning';
+      case 'AFTERNOON':
+        return 'Afternoon';
+      case 'EVENING':
+        return 'Evening';
       default:
         return value;
+    }
+  }
+
+  static String emoji(String value) {
+    switch (value.toUpperCase()) {
+      case 'MORNING':
+        return '🌅';
+      case 'AFTERNOON':
+        return '☀️';
+      case 'EVENING':
+        return '🌙';
+      default:
+        return '🍽️';
     }
   }
 }
 
 class DietStatus {
   DietStatus._();
-  static const String active = 'ACTIVE';
-  static const String replaced = 'REPLACED';
+  static const String active    = 'ACTIVE';
+  static const String replaced  = 'REPLACED';
   static const String completed = 'COMPLETED';
   static const String cancelled = 'CANCELLED';
 }
@@ -365,6 +454,6 @@ class DietStatus {
 class DietSource {
   DietSource._();
   static const String defaultSource = 'DEFAULT';
-  static const String override_ = 'OVERRIDE';
-  static const String additional = 'ADDITIONAL';
+  static const String override_     = 'OVERRIDE';
+  static const String additional    = 'ADDITIONAL';
 }

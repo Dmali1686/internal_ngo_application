@@ -396,6 +396,41 @@ class _DietHistoryScreenState extends State<DietHistoryScreen>
               ),
             ),
 
+            // ── Description note (ADDITIONAL diets) ──
+            if (diet.description != null && diet.description!.isNotEmpty)
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.06),
+                  border: Border(
+                    bottom: BorderSide(
+                        color: const Color(0xFF8B5CF6).withOpacity(0.12),
+                        width: 1),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.sticky_note_2_outlined,
+                        size: 14.sp,
+                        color: const Color(0xFF8B5CF6)),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        diet.description!,
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 12.sp,
+                          color: const Color(0xFF6D28D9),
+                          fontStyle: FontStyle.italic,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // ── Food items list ──
             if (diet.items.isEmpty)
               Padding(
@@ -462,7 +497,7 @@ class _DietHistoryScreenState extends State<DietHistoryScreen>
     final name = item.foodItem?.name ?? 'Food Item';
     final unit = item.foodItem?.unit ?? '';
     final qty = item.quantity;
-    final freq = DietFrequency.label(item.frequency ?? '');
+    final slotLabel = item.slot ?? 'Unspecified';
 
     return Row(
       children: [
@@ -494,7 +529,7 @@ class _DietHistoryScreenState extends State<DietHistoryScreen>
               ),
               SizedBox(height: 2.h),
               Text(
-                '$qty${unit.isNotEmpty ? ' $unit' : ''} • $freq',
+                '$qty${unit.isNotEmpty ? ' $unit' : ''} • Slot: $slotLabel',
                 style: GoogleFonts.nunitoSans(
                   fontSize: 11.sp,
                   color: AppColors.textMuted,

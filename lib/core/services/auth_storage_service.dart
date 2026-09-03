@@ -15,6 +15,7 @@ class AuthStorageService {
   String? _refreshToken;
   String? _userId;
   String? _departmentId;
+  String? _departmentName; // e.g. 'Food Department', 'Medical Department'
   bool _isDoctor = false;
   String? _role; // persisted role: 'Super Admin', 'Admin', 'Employee'
   String? _positionTitle; // backend-returned position title e.g. 'Medical HOD'
@@ -30,6 +31,9 @@ class AuthStorageService {
 
   /// The current user's department ID.
   String? get departmentId => _departmentId;
+
+  /// The current user's department name (e.g. 'Food Department').
+  String? get departmentName => _departmentName;
 
   /// True if the currently logged in user is identified as a doctor.
   bool get isDoctor => _isDoctor;
@@ -50,6 +54,7 @@ class AuthStorageService {
     _refreshToken = prefs.getString('auth_refresh_token');
     _userId = prefs.getString('auth_user_id');
     _departmentId = prefs.getString('auth_department_id');
+    _departmentName = prefs.getString('auth_department_name');
     _isDoctor = prefs.getBool('auth_is_doctor') ?? false;
     _role = prefs.getString('auth_role'); // restore role on restart
     _positionTitle = prefs.getString('auth_position_title'); // restore backend position
@@ -68,6 +73,12 @@ class AuthStorageService {
 
   void setDepartmentId(String id) {
     _departmentId = id;
+    _saveToPrefs();
+  }
+
+  /// Store the department name after login (e.g. 'Food Department').
+  void setDepartmentName(String? name) {
+    _departmentName = name;
     _saveToPrefs();
   }
 
@@ -103,6 +114,7 @@ class AuthStorageService {
     _refreshToken = null;
     _userId = null;
     _departmentId = null;
+    _departmentName = null;
     _isDoctor = false;
     _role = null;
     _positionTitle = null;
@@ -135,6 +147,12 @@ class AuthStorageService {
       await prefs.setString('auth_department_id', _departmentId!);
     } else {
       await prefs.remove('auth_department_id');
+    }
+
+    if (_departmentName != null) {
+      await prefs.setString('auth_department_name', _departmentName!);
+    } else {
+      await prefs.remove('auth_department_name');
     }
 
     if (_role != null) {

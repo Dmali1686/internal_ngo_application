@@ -130,6 +130,21 @@ class ApiEndpoints {
   static const String defaultDietPlans = '/diet/default-plans';
 
   // ---------------------------------------------------------------------------
+  // Food Department
+  // ---------------------------------------------------------------------------
+
+  /// GET — today's feeding schedule for food-dept staff.
+  static const String foodDeptScheduleToday = '/food-dept/schedule/today';
+
+  /// GET — feeding schedule for a specific date (YYYY-MM-DD).
+  static String foodDeptScheduleByDate(String date) =>
+      '/food-dept/schedule/$date';
+
+  /// PATCH — mark a feeding task as completed.
+  static String foodDeptCompleteTask(String taskId) =>
+      '/food-dept/tasks/$taskId/complete';
+
+  // ---------------------------------------------------------------------------
   // Medicines
   // ---------------------------------------------------------------------------
 

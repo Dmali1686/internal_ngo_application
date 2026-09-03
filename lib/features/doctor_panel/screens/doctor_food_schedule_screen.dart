@@ -174,7 +174,7 @@ class _DoctorFoodScheduleScreenState extends State<DoctorFoodScheduleScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Food Items & Frequency',
+                  'Food Items & Slots',
                   style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
@@ -211,7 +211,7 @@ class _DoctorFoodScheduleScreenState extends State<DoctorFoodScheduleScreen> {
                                   ),
                                   SizedBox(height: 2.h),
                                   Text(
-                                    'Qty: ${item.quantity} ${item.foodItem?.unit ?? ''} • Freq: ${item.frequency}',
+                                    'Qty: ${item.quantity} ${item.foodItem?.unit ?? ''} • Slot: ${item.slot ?? 'Unspecified'}',
                                     style: GoogleFonts.nunitoSans(
                                       fontSize: 13.sp,
                                       color: AppColors.textMuted,

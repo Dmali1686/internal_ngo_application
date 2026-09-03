@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_storage_service.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
+import '../../food_dept/screens/food_dept_task_screen.dart';
+import '../../food_dept/providers/food_dept_provider.dart';
 import 'task_details_screen.dart';
 
 class TasksDashboardScreen extends StatefulWidget {
@@ -54,6 +57,24 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ── Food Department employees see the feeding schedule instead ──────────
+    // Check the stored position title to identify FOD-HOD-001 / FOD-COOK-001.
+    final positionTitle =
+        AuthStorageService().positionTitle?.toLowerCase() ?? '';
+    final isFoodDeptEmployee = positionTitle.contains('food') ||
+        positionTitle.contains('cook') ||
+        positionTitle.contains('fod');
+
+    if (isFoodDeptEmployee) {
+      // Ensure FoodDeptProvider is accessible below the widget tree.
+      // It is already registered in app.dart MultiProvider so we just use it.
+      return ChangeNotifierProvider.value(
+        value: context.read<FoodDeptProvider>(),
+        child: const FoodDeptTaskScreen(),
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     return Container(
       color: const Color(0xFFF1F5F9),
       width: double.infinity,

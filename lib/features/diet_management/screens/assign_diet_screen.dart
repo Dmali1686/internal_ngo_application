@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../models/diet_models.dart';
 import '../providers/diet_provider.dart';
+import '../../../core/services/voice_service.dart';
 
 /// Screen for adding an ADDITIONAL diet to a patient.
 /// Calls `POST /api/v1/patients/{id}/diet/additional`.
@@ -31,8 +32,13 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
   // Date controllers
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   DateTime? _startDate;
   DateTime? _endDate;
+
+  // Voice Service
+  final VoiceService _voiceService = VoiceService();
+  bool _isListeningDesc = false;
 
   // Diet item rows
   final List<_DietItemRow> _itemRows = [];
@@ -59,10 +65,29 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
   void dispose() {
     _startDateController.dispose();
     _endDateController.dispose();
+    _descriptionController.dispose();
     for (final row in _itemRows) {
       row.dispose();
     }
     super.dispose();
+  }
+
+  void _toggleListeningDesc() async {
+    if (_isListeningDesc) {
+      await _voiceService.stopListening();
+      if (mounted) setState(() => _isListeningDesc = false);
+    } else {
+      setState(() => _isListeningDesc = true);
+      await _voiceService.startListening(
+        onResultFinalized: (text) {
+          if (mounted) {
+            setState(() {
+              _descriptionController.text = text;
+            });
+          }
+        },
+      );
+    }
   }
 
   // ─────────────────────── Build ───────────────────────
@@ -86,6 +111,8 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
                       _buildInfoBanner(),
                       SizedBox(height: 20.h),
                       _buildDateSection(),
+                      SizedBox(height: 20.h),
+                      _buildDescriptionSection(),
                       SizedBox(height: 20.h),
                       _buildFoodItemsSection(provider),
                       SizedBox(height: 80.h),
@@ -214,6 +241,60 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
                 : null,
           ),
         ],
+      ),
+    );
+  }
+
+  // ─────────────────────── Description Section ───────────────────────
+
+  Widget _buildDescriptionSection() {
+    return _buildCard(
+      title: 'Diet Note (optional)',
+      icon: Icons.sticky_note_2_outlined,
+      iconColor: const Color(0xFF8B5CF6),
+      action: IconButton(
+        icon: Icon(
+          _isListeningDesc ? Icons.mic : Icons.mic_none,
+          color: _isListeningDesc
+              ? const Color(0xFFEF4444)
+              : const Color(0xFF8B5CF6),
+        ),
+        onPressed: _toggleListeningDesc,
+        tooltip: 'Use Speech to Text',
+      ),
+      child: TextFormField(
+        controller: _descriptionController,
+        maxLines: 3,
+        style: GoogleFonts.nunitoSans(
+            fontSize: 13.sp, color: AppColors.textMain),
+        decoration: InputDecoration(
+          hintText:
+              'e.g. Patient needs soft food due to teeth extraction…',
+          hintStyle: GoogleFonts.nunitoSans(
+              fontSize: 12.sp, color: AppColors.textMuted),
+          prefixIcon: Padding(
+            padding: EdgeInsets.only(bottom: 40.h),
+            child: Icon(Icons.notes_rounded,
+                size: 16.sp, color: const Color(0xFF8B5CF6)),
+          ),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: const Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: const Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide:
+                const BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+          ),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        ),
       ),
     );
   }
@@ -417,7 +498,7 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
           ),
           SizedBox(height: 10.h),
 
-          // Quantity + Frequency row
+          // Quantity + Slot row
           Row(
             children: [
               Expanded(
@@ -439,20 +520,22 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
               SizedBox(width: 10.w),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: row.selectedFrequency,
+                  value: row.selectedSlot,
                   isExpanded: true,
                   style: GoogleFonts.nunitoSans(
                       fontSize: 13.sp, color: AppColors.textMain),
                   decoration: _inputDecoration(
-                      'Frequency *', Icons.repeat_rounded),
-                  items: DietFrequency.all
-                      .map((f) => DropdownMenuItem<String>(
-                            value: f,
-                            child: Text(DietFrequency.label(f)),
+                      'Slot *', Icons.wb_sunny_rounded),
+                  items: DietSlot.all
+                      .map((s) => DropdownMenuItem<String>(
+                            value: s,
+                            child: Text(
+                              '${DietSlot.emoji(s)} ${DietSlot.label(s)}',
+                            ),
                           ))
                       .toList(),
                   onChanged: (val) =>
-                      setState(() => row.selectedFrequency = val),
+                      setState(() => row.selectedSlot = val),
                   validator: (v) =>
                       v == null ? 'Required' : null,
                 ),
@@ -468,20 +551,50 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
             style: GoogleFonts.nunitoSans(
                 fontSize: 13.sp, color: AppColors.textMain),
             decoration: _inputDecoration(
-                'Instructions (optional)', Icons.notes_rounded),
+              'Instructions (optional)',
+              Icons.notes_rounded,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  row.isListening ? Icons.mic : Icons.mic_none,
+                  color: row.isListening
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF3B82F6),
+                ),
+                onPressed: () async {
+                  if (row.isListening) {
+                    await _voiceService.stopListening();
+                    if (mounted) setState(() => row.isListening = false);
+                  } else {
+                    setState(() => row.isListening = true);
+                    await _voiceService.startListening(
+                      onResultFinalized: (text) {
+                        if (mounted) {
+                          setState(() {
+                            row.instructionController.text = text;
+                          });
+                        }
+                      },
+                    );
+                  }
+                },
+                tooltip: 'Use Speech to Text',
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(String label, IconData icon,
+      {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
       labelStyle:
           GoogleFonts.nunitoSans(fontSize: 11.sp, color: AppColors.textMuted),
       prefixIcon:
           Icon(icon, size: 16.sp, color: const Color(0xFF065F46)),
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
@@ -572,6 +685,7 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
     required IconData icon,
     required Color iconColor,
     required Widget child,
+    Widget? action,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -601,14 +715,17 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
                   child: Icon(icon, size: 16.sp, color: iconColor),
                 ),
                 SizedBox(width: 10.w),
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMain,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMain,
+                    ),
                   ),
                 ),
+                if (action != null) action,
               ],
             ),
           ),
@@ -658,14 +775,14 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null) return;
 
-    // Validate each row has a food item
+    // Validate each row has a food item and slot
     for (final row in _itemRows) {
       if (row.selectedFoodItemId == null) {
         _showSnack('Please select a food item for all rows', isError: true);
         return;
       }
-      if (row.selectedFrequency == null) {
-        _showSnack('Please select frequency for all items', isError: true);
+      if (row.selectedSlot == null) {
+        _showSnack('Please select a meal slot for all items', isError: true);
         return;
       }
     }
@@ -674,7 +791,7 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
       return AdditionalDietItemRequest(
         foodItemId: row.selectedFoodItemId!,
         quantity: double.parse(row.quantityController.text.trim()),
-        frequency: row.selectedFrequency!,
+        slot: row.selectedSlot!,
         instructions: row.instructionController.text.trim(),
       );
     }).toList();
@@ -683,6 +800,9 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
       startDate: _startDate!.toIso8601String().substring(0, 10),
       endDate: _endDate != null
           ? _endDate!.toIso8601String().substring(0, 10)
+          : null,
+      description: _descriptionController.text.trim().isNotEmpty
+          ? _descriptionController.text.trim()
           : null,
       items: items,
     );
@@ -726,9 +846,10 @@ class _AssignDietScreenState extends State<AssignDietScreen> {
 
 class _DietItemRow {
   String? selectedFoodItemId;
-  String? selectedFrequency = DietFrequency.onceDaily;
+  String? selectedSlot = DietSlot.morning;
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController instructionController = TextEditingController();
+  bool isListening = false;
 
   void dispose() {
     quantityController.dispose();

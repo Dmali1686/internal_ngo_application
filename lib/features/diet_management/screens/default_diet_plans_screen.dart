@@ -366,7 +366,7 @@ class _DefaultDietPlansScreenState extends State<DefaultDietPlansScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${item.quantity}${item.foodItem?.unit != null ? ' ${item.foodItem!.unit}' : ''} • ${DietFrequency.label(item.frequency ?? '')}',
+                                    '${item.quantity}${item.foodItem?.unit != null ? ' ${item.foodItem!.unit}' : ''} • ${DietSlot.emoji(item.slot ?? '')} ${DietSlot.label(item.slot ?? '')}',
                                     style: GoogleFonts.nunitoSans(
                                       fontSize: 11.sp,
                                       color: AppColors.textMuted,
@@ -539,8 +539,7 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
   final _maxTempCtrl = TextEditingController();
   final _priorityCtrl = TextEditingController(text: '1');
 
-  // Simple item: food_item_id + quantity + frequency
-  final List<_SimpleFoodRow> _foodRows = [_SimpleFoodRow()];
+  final List<_FoodItemRow> _foodRows = [_FoodItemRow()];
 
   final List<String> _animalTypes = ['DOG', 'CAT', 'COW', 'BUFFALO', 'OTHER'];
   final List<String> _conditions = ['NORMAL', 'FEVER', 'INJURY', 'RECOVERY'];
@@ -694,7 +693,7 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
                                   )),
                           TextButton.icon(
                             onPressed: () => setState(
-                                () => _foodRows.add(_SimpleFoodRow())),
+                                () => _foodRows.add(_FoodItemRow())),
                             icon: const Icon(Icons.add_rounded,
                                 color: Color(0xFF0F4C81)),
                             label: Text('Add item',
@@ -747,7 +746,7 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
     );
   }
 
-  Widget _buildFoodRow(int index, _SimpleFoodRow row) {
+  Widget _buildFoodRow(int index, _FoodItemRow row) {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
@@ -783,15 +782,17 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
               SizedBox(width: 8.w),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: row.frequency,
-                  items: DietFrequency.all
-                      .map((f) => DropdownMenuItem(
-                          value: f,
-                          child: Text(DietFrequency.label(f),
-                              style: TextStyle(fontSize: 12.sp))))
+                  value: row.slot,
+                  items: DietSlot.all
+                      .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(
+                            '${DietSlot.emoji(s)} ${DietSlot.label(s)}',
+                            style: TextStyle(fontSize: 12.sp),
+                          )))
                       .toList(),
-                  onChanged: (v) => setState(() => row.frequency = v!),
-                  decoration: _sd('Frequency'),
+                  onChanged: (v) => setState(() => row.slot = v!),
+                  decoration: _sd('Slot'),
                   style: GoogleFonts.nunitoSans(
                       fontSize: 12.sp,
                       color: AppColors.textMain),
@@ -852,7 +853,7 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
       return DefaultDietPlanItemRequest(
         foodItemId: r.foodItemIdCtrl.text.trim(),
         quantity: double.tryParse(r.qtyCtrl.text.trim()) ?? 0,
-        frequency: r.frequency,
+        slot: r.slot,
       );
     }).toList();
 
@@ -895,10 +896,10 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
   }
 }
 
-class _SimpleFoodRow {
+class _FoodItemRow {
   final foodItemIdCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
-  String frequency = DietFrequency.onceDaily;
+  String slot = DietSlot.morning;
 
   void dispose() {
     foodItemIdCtrl.dispose();

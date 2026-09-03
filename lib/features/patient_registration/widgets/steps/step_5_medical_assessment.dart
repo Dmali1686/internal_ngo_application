@@ -322,66 +322,6 @@ class Step5MedicalAssessment extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 12.h),
-                voiceService.isVoiceModeActive
-                    ? Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 16.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12.r),
-                          border:
-                              (formProvider.activeVoiceField == 'temperature')
-                              ? Border.all(
-                                  color: const Color(0xFF006E1C),
-                                  width: 2.w,
-                                )
-                              : Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          formProvider.temperatureController.text.isEmpty
-                              ? '101.5'
-                              : formProvider.temperatureController.text,
-                          style: GoogleFonts.nunitoSans(
-                            fontSize: 14.sp,
-                            color:
-                                formProvider.temperatureController.text.isEmpty
-                                ? Colors.grey.shade400
-                                : const Color(0xFF1B1C1C),
-                          ),
-                        ),
-                      )
-                    : TextField(
-                        controller: formProvider.temperatureController,
-                        focusNode: formProvider.temperatureFocus,
-                        style: GoogleFonts.nunitoSans(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF1B1C1C),
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Body Temp (°F)',
-                          hintText: '101.5',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: Color(0xFF006E1C),
-                              width: 2.w,
-                            ),
-                          ),
-                        ),
-                      ),
                 SizedBox(height: 12.h),
                 Container(
                   padding: EdgeInsets.all(12.w),

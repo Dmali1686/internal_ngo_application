@@ -97,6 +97,7 @@ class PatientRegistrationRequest {
   final String? transportedBy;
   final String? transporterContact;
   final double? weight;
+  final double? temperature;
 
   PatientRegistrationRequest({
     this.age,
@@ -116,6 +117,7 @@ class PatientRegistrationRequest {
     this.transportedBy,
     this.transporterContact,
     this.weight,
+    this.temperature,
   });
 
   Map<String, dynamic> toJson() {
@@ -137,6 +139,7 @@ class PatientRegistrationRequest {
       if (transportedBy != null) 'transported_by': transportedBy,
       if (transporterContact != null) 'transporter_contact': transporterContact,
       if (weight != null) 'weight': weight,
+      if (temperature != null) 'temperature': temperature,
     };
   }
 }
@@ -160,6 +163,7 @@ class PatientModel {
   final String? gender;
   final String? age;
   final double? weight;
+  final double? temperature;
   final bool? isSterilized;
   final String? transportedBy;
   final String? transporterContact;
@@ -184,6 +188,7 @@ class PatientModel {
     this.gender,
     this.age,
     this.weight,
+    this.temperature,
     this.isSterilized,
     this.transportedBy,
     this.transporterContact,
@@ -210,6 +215,7 @@ class PatientModel {
       gender: json['gender']?.toString(),
       age: json['age']?.toString(),
       weight: (json['weight'] as num?)?.toDouble(),
+      temperature: (json['temperature'] as num?)?.toDouble(),
       isSterilized: json['is_sterilized'] as bool?,
       transportedBy: json['transported_by']?.toString(),
       transporterContact: json['transporter_contact']?.toString(),
@@ -236,6 +242,7 @@ class PatientModel {
     'gender': gender,
     'age': age,
     'weight': weight,
+    'temperature': temperature,
     'is_sterilized': isSterilized,
     'transported_by': transportedBy,
     'transporter_contact': transporterContact,

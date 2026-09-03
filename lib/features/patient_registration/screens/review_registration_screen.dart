@@ -171,6 +171,11 @@ class _ReviewRegistrationScreenState extends State<ReviewRegistrationScreen> {
     if (provider.weightController.text.isNotEmpty) {
       weightParsed = double.tryParse(provider.weightController.text);
     }
+    
+    double? temperatureParsed;
+    if (provider.temperatureController.text.isNotEmpty) {
+      temperatureParsed = double.tryParse(provider.temperatureController.text);
+    }
 
     String mappedGender = 'UNKNOWN';
     final g = data['gender']?.toString().toUpperCase() ?? '';
@@ -189,6 +194,7 @@ class _ReviewRegistrationScreenState extends State<ReviewRegistrationScreen> {
       gender: mappedGender,
       age: data['age'],
       weight: weightParsed,
+      temperature: temperatureParsed,
       isSterilized: provider.isSterilized,
       symptoms: data['condition'],
       diagnosis: data['diagnosis'],

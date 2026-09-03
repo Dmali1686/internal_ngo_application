@@ -193,8 +193,15 @@ class _AnimalOverviewScreenState extends State<AnimalOverviewScreen>
         : p.animalType;
     final statusLabel = _statusLabels[p.status.toUpperCase()] ?? p.status;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLightGray,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/dashboard-transition');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLightGray,
       body: Stack(
         children: [
           CustomScrollView(
@@ -212,7 +219,7 @@ class _AnimalOverviewScreenState extends State<AnimalOverviewScreen>
                     backgroundColor: Colors.white24,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.go('/dashboard-transition'),
                     ),
                   ),
                 ),
@@ -381,7 +388,8 @@ class _AnimalOverviewScreenState extends State<AnimalOverviewScreen>
                           // Medical Assessment
                           if ((p.symptoms != null && p.symptoms!.isNotEmpty) ||
                               (p.diagnosis != null && p.diagnosis!.isNotEmpty) ||
-                              (p.tests != null && p.tests!.isNotEmpty)) ...[
+                              (p.tests != null && p.tests!.isNotEmpty) ||
+                              (p.temperature != null)) ...[
                             _sectionTitle('Medical Assessment'),
                             SizedBox(height: 10.h),
                             _medCard(p),
@@ -486,6 +494,7 @@ class _AnimalOverviewScreenState extends State<AnimalOverviewScreen>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -907,6 +916,14 @@ class _AnimalOverviewScreenState extends State<AnimalOverviewScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (p.temperature != null) ...[
+            _medLabel('Body Temperature'),
+            SizedBox(height: 6.h),
+            Text('${p.temperature} °F',
+                style: GoogleFonts.nunitoSans(
+                    fontSize: 14.sp, height: 1.5, color: AppColors.textMain)),
+            SizedBox(height: 14.h),
+          ],
           if (p.symptoms != null && p.symptoms!.isNotEmpty) ...[
             _medLabel('Symptoms'),
             SizedBox(height: 6.h),

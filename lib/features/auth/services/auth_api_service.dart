@@ -63,6 +63,12 @@ class AuthApiService {
           if (profileMap['department_id'] != null) {
             _authStorage.setDepartmentId(profileMap['department_id'].toString());
           }
+          // Store department name so we can show the dept card even with 0 tasks.
+          final deptName = profileMap['department_name']?.toString() ??
+              profileMap['department']?['name']?.toString();
+          if (deptName != null && deptName.isNotEmpty) {
+            _authStorage.setDepartmentName(deptName);
+          }
           // Save the backend position/role title (e.g. 'Medical HOD', 'Veterinarian')
           final backendRole = profileMap['role']?.toString() ??
               profileMap['position_title']?.toString() ??

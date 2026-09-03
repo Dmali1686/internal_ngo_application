@@ -160,6 +160,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           ? provider.colorController.text
           : 'Unknown',
       weight: double.tryParse(provider.weightController.text),
+      temperature: double.tryParse(provider.temperatureController.text),
       isSterilized: provider.isSterilized,
       animalAddress: addressParts.isNotEmpty
           ? addressParts.join(', ')
