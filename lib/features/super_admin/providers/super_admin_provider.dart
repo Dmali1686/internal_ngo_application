@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/super_admin_models.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/utils/app_error_handler.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/auth_storage_service.dart';
 
@@ -75,7 +76,7 @@ class SuperAdminProvider extends ChangeNotifier {
         _departments = data.map((e) => DepartmentModel.fromJson(e)).toList();
       }
     } catch (e) {
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
       AppLogger.error('SuperAdminProvider', 'Failed to load departments: $e');
     } finally {
       _isLoading = false;

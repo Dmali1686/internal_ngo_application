@@ -417,7 +417,20 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         time: 'Today, 08:00 AM',
                         badge: 'On Schedule',
                         badgeColor: const Color(0xFF34A853),
-                        onTap: () => context.push('/diet-dashboard'),
+                        onTap: () {
+                          final patientId = _patientData['id']?.toString() ?? _patientData['patient_id']?.toString() ?? '';
+                          final patientName = _patientData['animal_name']?.toString();
+                          final animalType = _patientData['animal_type']?.toString();
+                          
+                          context.push(
+                            '/diet-history',
+                            extra: {
+                              'patientId': patientId,
+                              'patientName': patientName,
+                              'animalType': animalType,
+                            },
+                          );
+                        },
                       ),
                       SizedBox(height: 12.h),
 

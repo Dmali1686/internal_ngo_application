@@ -13,6 +13,7 @@ import '../providers/task_form_provider.dart';
 import '../services/task_voice_assistant.dart';
 import '../../../core/services/voice_service.dart';
 import '../../../core/widgets/global_voice_button.dart';
+import '../../../core/widgets/voice_language_picker.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   final String? initialDepartmentId;
@@ -127,6 +128,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     super.dispose();
   }
 
+  /// Shows the language picker bottom sheet, then starts the voice flow
+  /// in the selected language.
+  Future<void> _showLanguagePickerAndStartVoice() async {
+    final selectedConfig = await showVoiceLanguagePicker(context);
+    if (selectedConfig == null || !mounted) return;
+    _voiceAssistant.startVoiceFlow(selectedConfig);
+  }
+
   Future<void> _submitTask() async {
     if (!_formKey.currentState!.validate()) return;
     if (_formProvider.selectedDepartmentId == null || _formProvider.selectedAssigneeId == null) {
@@ -237,7 +246,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                               if (voiceService.isVoiceModeActive) {
                                 voiceService.abortVoice();
                               } else {
-                                _voiceAssistant.startVoiceFlow();
+                                _showLanguagePickerAndStartVoice();
                               }
                             },
                           );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/voice_service.dart';
+import '../../../core/services/voice_language_config.dart';
 import '../../../core/services/voice_text_processor.dart';
 import '../../../core/utils/logger.dart';
 import '../providers/task_form_provider.dart';
@@ -12,6 +13,9 @@ class TaskVoiceAssistant {
 
   static const int _maxRetries = 3;
   final Map<String, int> _retryCounts = {};
+
+  /// The active language config for this voice session.
+  VoiceLanguageConfig _lang = VoiceLanguageConfig.english;
 
   TaskVoiceAssistant(this.voiceService, this.formProvider);
 
@@ -37,11 +41,12 @@ class TaskVoiceAssistant {
 
   void _speak(String text, {VoidCallback? onComplete}) {
     if (_isDisposed) return;
-    voiceService.speak(text, languageCode: 'en-IN', onComplete: () {
+    AppLogger.info('TaskVoiceAssistant', 'Speaking [${_lang.ttsCode}]: $text');
+    voiceService.speak(text, languageCode: _lang.ttsCode, onComplete: () {
       if (!_isDisposed && onComplete != null) onComplete();
     });
   }
-  
+
   void _finishStep(String message) {
     if (_isDisposed) return;
     formProvider.setActiveVoiceField(null);
@@ -67,10 +72,12 @@ class TaskVoiceAssistant {
   }) {
     if (_isDisposed) return;
     voiceService.startListening(
-      localeId: 'en_IN',
+      localeId: _lang.sttLocale,
       onResultPartial: (text) {
         if (_isDisposed) return;
-        if (onPartial != null && !VoiceTextProcessor.isCancelCommand(text) && !VoiceTextProcessor.isRedoCommand(text)) {
+        if (onPartial != null &&
+            !VoiceTextProcessor.isCancelCommand(text) &&
+            !VoiceTextProcessor.isRedoCommand(text)) {
           onPartial(text);
         }
       },
@@ -79,7 +86,7 @@ class TaskVoiceAssistant {
         if (VoiceTextProcessor.isCancelCommand(text)) {
           formProvider.setActiveVoiceField(null);
           voiceService.setVoiceModeActive(false);
-          _speak("Task creation voice mode cancelled.");
+          _speak(_lang.cancelMessage);
           return;
         }
 
@@ -93,12 +100,12 @@ class TaskVoiceAssistant {
 
         if (text.isEmpty) {
           if (_isMaxRetriesReached(fieldKey)) {
-             formProvider.setActiveVoiceField(null);
-             _speak("Too many retries. Please continue manually.", onComplete: () {
-                voiceService.setVoiceModeActive(false);
-             });
+            formProvider.setActiveVoiceField(null);
+            _speak(_lang.maxRetriesMessage, onComplete: () {
+              voiceService.setVoiceModeActive(false);
+            });
           } else {
-             _speak("I didn't catch that. Please repeat.", onComplete: onRedo);
+            _speak(_lang.retryMessage, onComplete: onRedo);
           }
           return;
         }
@@ -109,8 +116,12 @@ class TaskVoiceAssistant {
     );
   }
 
-  void startVoiceFlow() {
+  /// Start the full voice flow using the given language config.
+  ///
+  /// Pass [VoiceLanguageConfig.english] for the original English-only behavior.
+  void startVoiceFlow([VoiceLanguageConfig? config]) {
     _isDisposed = false; // Reset in case assistant is restarted
+    _lang = config ?? VoiceLanguageConfig.english;
     voiceService.setVoiceModeActive(true);
     _askForTitle();
   }
@@ -123,7 +134,7 @@ class TaskVoiceAssistant {
     formProvider.setActiveVoiceField('title');
     _scrollTo(formProvider.titleFocus);
     _speak(
-      "What is the title of the task?",
+      _lang.askTitle,
       onComplete: () {
         _listenWithCommands(
           fieldKey: 'title',
@@ -131,7 +142,8 @@ class TaskVoiceAssistant {
             formProvider.titleController.text = text;
           },
           onResult: (text) {
-            formProvider.titleController.text = VoiceTextProcessor.capitalizeName(text);
+            formProvider.titleController.text =
+                VoiceTextProcessor.capitalizeName(text);
             _askForDescription();
           },
           onRedo: _askForTitle,
@@ -148,7 +160,7 @@ class TaskVoiceAssistant {
     formProvider.setActiveVoiceField('description');
     _scrollTo(formProvider.descriptionFocus);
     _speak(
-      "Please say the task description.",
+      _lang.askDescription,
       onComplete: () {
         _listenWithCommands(
           fieldKey: 'description',
@@ -168,20 +180,15 @@ class TaskVoiceAssistant {
   void _askForPriority() {
     formProvider.setActiveVoiceField('priority');
     _speak(
-      "Is this task normal, important, or urgent?",
+      _lang.askPriority,
       onComplete: () {
         _listenWithCommands(
           fieldKey: 'priority',
           onResult: (text) {
-            final t = text.toLowerCase();
-            if (t.contains('urgent')) {
-              formProvider.setPriority('URGENT');
-            } else if (t.contains('important')) {
-              formProvider.setPriority('IMPORTANT');
-            } else {
-              formProvider.setPriority('NORMAL');
-            }
-            _finishStep("Task details filled. Please select the department and assignee manually.");
+            // Mixed-language priority matching via VoiceLanguageConfig
+            final priority = _lang.matchPriority(text);
+            formProvider.setPriority(priority);
+            _finishStep(_lang.finishMessage);
           },
           onRedo: _askForPriority,
         );

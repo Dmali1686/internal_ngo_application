@@ -80,7 +80,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
             // Tab 1 — Create Employee
             const CreateEmployeeScreen(),
             // Tab 2 — Animals List
-            const AllPatientsScreen(),
+            const AllPatientsScreen(showBackButton: false),
             // Tab 3 — All Tasks (SUP001 global view)
             const AdminAllTasksScreen(),
             // Tab 4 — Profile (reuse existing screen)
@@ -501,21 +501,18 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                   icon: Icons.history_edu_rounded,
                   color: const Color(0xFF065F46),
                   onTap: () {
+                    // Switch to Animals tab instantly
+                    setState(() => _currentNavIndex = 2);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(
-                        'Select a patient from the Animals tab first.',
+                        'Please select a patient to view their diet history.',
                         style: GoogleFonts.nunitoSans(color: Colors.white),
                       ),
                       backgroundColor: const Color(0xFF065F46),
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.r)),
-                      action: SnackBarAction(
-                        label: 'Animals',
-                        textColor: Colors.white,
-                        onPressed: () =>
-                            setState(() => _currentNavIndex = 2),
-                      ),
+                      duration: const Duration(seconds: 2),
                     ));
                   },
                 ),

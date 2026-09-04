@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/voice_service.dart';
@@ -84,8 +85,18 @@ class _FoodDeptTaskScreenState extends State<FoodDeptTaskScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _pageBg,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard-transition');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _pageBg,
       // ── App Bar ───────────────────────────────────────────────────────────
       appBar: AppBar(
         backgroundColor: _primary,
@@ -93,7 +104,13 @@ class _FoodDeptTaskScreenState extends State<FoodDeptTaskScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,
               color: Colors.white, size: 20),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard-transition');
+            }
+          },
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +216,7 @@ class _FoodDeptTaskScreenState extends State<FoodDeptTaskScreen>
           );
         },
       ),
-    );
+    ),);
   }
 
   Widget _buildBody(BuildContext context, FoodDeptProvider provider) {

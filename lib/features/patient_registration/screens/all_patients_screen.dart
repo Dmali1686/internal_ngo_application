@@ -12,7 +12,8 @@ import '../providers/patient_list_provider.dart';
 
 /// Full-screen patient list with search, filters, and infinite scroll.
 class AllPatientsScreen extends StatefulWidget {
-  const AllPatientsScreen({super.key});
+  final bool showBackButton;
+  const AllPatientsScreen({super.key, this.showBackButton = true});
 
   @override
   State<AllPatientsScreen> createState() => _AllPatientsScreenState();
@@ -158,9 +159,19 @@ class _AllPatientsScreenState extends State<AllPatientsScreen>
   Widget build(BuildContext context) {
     final prov = context.watch<PatientListProvider>();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: FadeTransition(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard-transition');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F7FA),
+        body: FadeTransition(
         opacity: _fadeCtrl,
         child: Column(
           children: [
@@ -172,7 +183,7 @@ class _AllPatientsScreenState extends State<AllPatientsScreen>
           ],
         ),
       ),
-    );
+    ),);
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -193,19 +204,26 @@ class _AllPatientsScreenState extends State<AllPatientsScreen>
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10.r),
+          if (widget.showBackButton)
+            GestureDetector(
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard-transition');
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white, size: 18.w),
               ),
-              child: Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 18.w),
             ),
-          ),
-          SizedBox(width: 14.w),
+          if (widget.showBackButton) SizedBox(width: 14.w),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

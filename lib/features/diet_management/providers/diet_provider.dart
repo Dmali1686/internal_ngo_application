@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/diet_models.dart';
 import '../services/diet_api_service.dart';
+import '../../../core/utils/app_error_handler.dart';
 import '../../../core/utils/logger.dart';
 
 /// Manages all diet-related state for both the patient view
@@ -65,7 +66,7 @@ class DietProvider with ChangeNotifier {
       _dietHistory = await _service.getDietHistory(patientId);
     } catch (e) {
       AppLogger.error('DietProvider', 'fetchDietHistory: $e');
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
       _dietHistory = [];
     } finally {
       _isLoading = false;
@@ -92,7 +93,7 @@ class DietProvider with ChangeNotifier {
       return true;
     } catch (e) {
       AppLogger.error('DietProvider', 'addAdditionalDiet: $e');
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
       _isSubmitting = false;
       notifyListeners();
       return false;
@@ -110,7 +111,7 @@ class DietProvider with ChangeNotifier {
       _defaultPlans = await _service.getDefaultDietPlans();
     } catch (e) {
       AppLogger.error('DietProvider', 'fetchDefaultDietPlans: $e');
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
       _defaultPlans = [];
     } finally {
       _isLoading = false;
@@ -134,7 +135,7 @@ class DietProvider with ChangeNotifier {
       return true;
     } catch (e) {
       AppLogger.error('DietProvider', 'createDefaultDietPlan: $e');
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
       _isSubmitting = false;
       notifyListeners();
       return false;

@@ -64,8 +64,18 @@ class _RegistrationDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard-transition');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Patient Registration'),
         elevation: 0,
@@ -136,7 +146,7 @@ class _RegistrationDashboardScreenState
         backgroundColor: Colors.green[700],
         child: const Icon(Icons.add, color: Colors.white),
       ),
-    );
+    ),);
   }
 
   Widget _buildPatientCountCard() {

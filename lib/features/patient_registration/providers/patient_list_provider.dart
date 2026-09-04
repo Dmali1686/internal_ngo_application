@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/app_error_handler.dart';
 import '../models/patient_registration_model.dart';
 import '../services/patient_api_service.dart';
 
@@ -152,7 +153,7 @@ class PatientListProvider extends ChangeNotifier {
         _error = null;
       }
     } catch (e) {
-      _error = e.toString();
+      _error = AppErrorHandler.translate(e);
     }
   }
 }

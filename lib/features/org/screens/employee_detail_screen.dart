@@ -309,6 +309,13 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                             label: data.accessCategory,
                             icon: Icons.shield_outlined,
                           ),
+                        GestureDetector(
+                          onTap: () => _showTaskHistory(context, data.tasks),
+                          child: const _HeroBadge(
+                            label: 'Task History',
+                            icon: Icons.history_rounded,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -338,6 +345,10 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
   }
 
   Widget _buildContent(EmployeeDetailResponse data) {
+    final activeTasks = data.tasks
+        .where((t) => t.status.toLowerCase() != 'completed')
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -353,7 +364,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                 icon: Icons.task_alt_rounded,
                 accent: widget.accentColor,
               ),
-              if (data.tasks.isNotEmpty)
+              if (activeTasks.isNotEmpty)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
@@ -361,7 +372,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
-                    '${data.tasks.length}',
+                    '${activeTasks.length}',
                     style: GoogleFonts.inter(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w700,
@@ -374,13 +385,13 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
         ),
         SizedBox(height: 12.h),
 
-        if (data.tasks.isEmpty)
+        if (activeTasks.isEmpty)
           _buildEmptyTasks()
         else
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Column(
-              children: data.tasks
+              children: activeTasks
                   .map((task) => _TaskCard(task: task, accent: widget.accentColor))
                   .toList(),
             ),
@@ -850,6 +861,96 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showTaskHistory(BuildContext context, List<EmployeeTask> tasks) {
+    final completedTasks =
+        tasks.where((t) => t.status.toLowerCase() == 'completed').toList();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F6FB),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                margin: EdgeInsets.only(top: 12.h, bottom: 8.h),
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              child: Row(
+                children: [
+                  Icon(Icons.history_rounded,
+                      color: widget.accentColor, size: 22.w),
+                  SizedBox(width: 10.w),
+                  Text(
+                    'Task History',
+                    style: GoogleFonts.inter(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      '${completedTasks.length} Completed',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(color: Colors.black.withOpacity(0.05), height: 1),
+            Expanded(
+              child: completedTasks.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No completed tasks found.',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 30.h),
+                      itemCount: completedTasks.length,
+                      itemBuilder: (context, index) {
+                        return _TaskCard(
+                          task: completedTasks[index],
+                          accent: widget.accentColor,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
