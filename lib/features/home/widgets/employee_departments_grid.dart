@@ -131,6 +131,7 @@ class _EmployeeDepartmentsGridState extends State<EmployeeDepartmentsGrid> {
               color: AppColors.textMain,
             ),
           ),
+          SizedBox(height: 16.h),
           GridView.builder(
             padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),

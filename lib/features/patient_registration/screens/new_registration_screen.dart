@@ -153,7 +153,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       animalName: provider.animalNameController.text.isNotEmpty
           ? provider.animalNameController.text
           : null,
-      animalType: provider.animalType,
+      animalType: provider.animalType.toUpperCase(),
       age: provider.age != 'Unknown' ? provider.age : 'Unknown',
       gender: apiGender,
       color: provider.colorController.text.isNotEmpty
@@ -188,6 +188,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       cageNumber: provider.cageNumberController.text.isNotEmpty
           ? provider.cageNumberController.text
           : null,
+      condition: provider.condition,
     );
 
     try {

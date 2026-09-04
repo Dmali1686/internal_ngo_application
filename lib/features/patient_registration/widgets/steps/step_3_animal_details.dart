@@ -259,6 +259,26 @@ class Step3AnimalDetails extends StatelessWidget {
           fieldKey: 'color',
         ),
         SizedBox(height: 16.h),
+        // ── Condition selector (for diet rule matching) ─────────────────
+        Text(
+          'Condition',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          'Used to automatically assign a diet plan',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 11.sp,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        _buildConditionSelector(formProvider),
+        SizedBox(height: 16.h),
         Text(
           'Gender',
           style: GoogleFonts.nunitoSans(
@@ -355,8 +375,8 @@ class Step3AnimalDetails extends StatelessWidget {
         ),
         SizedBox(height: 16.h),
         _buildTextField(
-          'Temperature (°F)',
-          'e.g. 101.5',
+          'Temperature (°C)',
+          'e.g. 38.5',
           formProvider.temperatureController,
           focusNode: formProvider.temperatureFocus,
           keyboardType: TextInputType.number,
@@ -393,6 +413,64 @@ class Step3AnimalDetails extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildConditionSelector(RegistrationProvider formProvider) {
+    const conditions = [
+      ('NORMAL', Color(0xFF006E1C), Color(0xFFE8F5E9), Color(0xFF1B5E20)),
+      ('FEVER', Color(0xFFD98900), Color(0xFFFFF8E1), Color(0xFF7C4B00)),
+      ('INJURY', Color(0xFFBA1A1A), Color(0xFFFFEBEE), Color(0xFF7F0000)),
+    ];
+
+    return Row(
+      children: conditions.map((entry) {
+        final (label, borderColor, bgColor, textColor) = entry;
+        final isSelected = formProvider.condition == label;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => formProvider.updateCondition(label),
+            child: Container(
+              margin: EdgeInsets.only(
+                right: label != 'INJURY' ? 8.w : 0,
+              ),
+              padding: EdgeInsets.symmetric(vertical: 10.h),
+              decoration: BoxDecoration(
+                color: isSelected ? bgColor : Colors.white,
+                border: Border.all(
+                  color: isSelected ? borderColor : Colors.grey.shade300,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    label == 'NORMAL'
+                        ? Icons.check_circle_outline
+                        : label == 'FEVER'
+                            ? Icons.thermostat
+                            : Icons.healing,
+                    color: isSelected ? borderColor : Colors.grey.shade400,
+                    size: 20.w,
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    label,
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 11.sp,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? textColor : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -616,15 +694,6 @@ class Step3AnimalDetails extends StatelessWidget {
           ),
         ),
         SizedBox(height: 12.h),
-        _buildTextField(
-          'Diagnosis',
-          'Enter suspected diagnosis',
-          formProvider.diagnosisController,
-          focusNode: formProvider.diagnosisFocus,
-          readOnly: voiceService.isVoiceModeActive,
-          fieldKey: 'diagnosis',
-        ),
-        SizedBox(height: 16.h),
         _buildTextField(
           'Required Tests (Optional)',
           'e.g. Blood Test, X-Ray',

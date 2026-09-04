@@ -45,8 +45,19 @@ class FoodDeptProvider extends ChangeNotifier {
   String? _selectedSlot; // "MORNING" | "AFTERNOON" | "EVENING" | null
   String? get selectedSlot => _selectedSlot;
 
+  // ─── History mode ───
+  bool _showHistory = false;
+  bool get showHistory => _showHistory;
+
   void setSlotFilter(String? slot) {
     _selectedSlot = slot;
+    _showHistory = false; // leave history mode when a slot pill is tapped
+    notifyListeners();
+  }
+
+  void toggleHistory() {
+    _showHistory = !_showHistory;
+    if (_showHistory) _selectedSlot = null; // clear slot filter in history mode
     notifyListeners();
   }
 
@@ -130,21 +141,71 @@ class FoodDeptProvider extends ChangeNotifier {
   // ─── Filtered schedule patients ───
 
   /// Returns the [PatientSchedule] list filtered by the selected slot.
-  /// If no slot is selected, returns all patients (but still only shows
-  /// matching slots within each patient card).
+  /// Patients whose every task is completed are hidden from the list
+  /// (the completed count in the summary bar is unaffected — it comes
+  /// directly from the backend's [DailyScheduleResponse.completedTasks]).
   List<PatientSchedule> get filteredPatients {
     final patients = _schedule?.schedule ?? [];
-    if (_selectedSlot == null) return patients;
 
-    // Only return patients that have at least one task in the selected slot.
-    return patients
-        .where((p) => p.slots.any((s) => s.slot == _selectedSlot))
+    // Keep only patients that still have at least one PENDING task
+    // (optionally also matching the selected slot filter).
+    return patients.where((p) {
+      final slotsToCheck = _selectedSlot == null
+          ? p.slots
+          : p.slots.where((s) => s.slot == _selectedSlot).toList();
+      return slotsToCheck.any((s) => s.items.any((t) => t.isPending));
+    }).toList();
+  }
+
+  /// For a given patient, returns only the slot(s) that match the filter
+  /// AND still have at least one pending task (completed tasks are hidden).
+  List<SlotSchedule> visibleSlotsFor(PatientSchedule patient) {
+    final slots = _selectedSlot == null
+        ? patient.slots
+        : patient.slots.where((s) => s.slot == _selectedSlot).toList();
+
+    // Within each slot, strip out completed tasks so done cards disappear.
+    return slots
+        .map((s) => SlotSchedule(
+              slot: s.slot,
+              items: s.items.where((t) => t.isPending).toList(),
+            ))
+        .where((s) => s.items.isNotEmpty) // drop slots that become empty
         .toList();
   }
 
-  /// For a given patient, returns only the slot(s) that match the filter.
-  List<SlotSchedule> visibleSlotsFor(PatientSchedule patient) {
-    if (_selectedSlot == null) return patient.slots;
-    return patient.slots.where((s) => s.slot == _selectedSlot).toList();
+  // ─── Completed history (frontend-only, no extra API call) ───
+
+  /// Returns a flat list of [_CompletedEntry] records built from the already-
+  /// fetched schedule data.  No backend round-trip is needed.
+  List<CompletedEntry> get completedHistory {
+    final result = <CompletedEntry>[];
+    for (final patient in _schedule?.schedule ?? []) {
+      for (final slot in patient.slots) {
+        for (final task in slot.items) {
+          if (task.isCompleted) {
+            result.add(CompletedEntry(
+              patient: patient,
+              slot: slot.slot,
+              task: task,
+            ));
+          }
+        }
+      }
+    }
+    return result;
   }
+}
+
+/// Holds one completed feeding task together with its patient context.
+class CompletedEntry {
+  final PatientSchedule patient;
+  final String slot; // "MORNING" | "AFTERNOON" | "EVENING"
+  final FeedingTask task;
+
+  const CompletedEntry({
+    required this.patient,
+    required this.slot,
+    required this.task,
+  });
 }

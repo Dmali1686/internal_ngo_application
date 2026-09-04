@@ -215,12 +215,18 @@ class _FoodDeptTaskScreenState extends State<FoodDeptTaskScreen>
       return _buildEmpty();
     }
 
+    // ── History mode ─────────────────────────────────────────────
+    if (provider.showHistory) {
+      return _buildHistoryList(context, provider);
+    }
+
+    // ── Normal pending list ───────────────────────────────────────
     final patients = provider.filteredPatients;
     if (patients.isEmpty) return _buildEmpty();
 
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
-      itemCount: patients.length + 1,
+      padding: EdgeInsets.fromLTRB(16.w, 24.h, 16.w, 100.h),
+      itemCount: patients.length + 1, // +1 header
       itemBuilder: (context, index) {
         if (index == 0) {
           return Padding(
@@ -259,6 +265,74 @@ class _FoodDeptTaskScreenState extends State<FoodDeptTaskScreen>
             onComplete: (task) =>
                 _handleComplete(context, provider, task),
           ),
+        );
+      },
+    );
+  }
+
+  // ── History list view ─────────────────────────────────────────
+  Widget _buildHistoryList(BuildContext context, FoodDeptProvider provider) {
+    final history = provider.completedHistory;
+    if (history.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle_outline_rounded,
+                size: 52.sp,
+                color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+            SizedBox(height: 12.h),
+            Text('No completed tasks yet',
+                style: GoogleFonts.poppins(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _textMain)),
+            SizedBox(height: 4.h),
+            Text('Tasks you complete will appear here.',
+                style: GoogleFonts.nunitoSans(
+                    fontSize: 13.sp, color: _textSub),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(16.w, 24.h, 16.w, 100.h),
+      itemCount: history.length + 1, // +1 header
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Icon(Icons.check_circle_rounded,
+                      size: 14.sp,
+                      color: const Color(0xFF10B981)),
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  '${history.length} task${history.length != 1 ? 's' : ''} completed today',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _textMain,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        final entry = history[index - 1];
+        return Padding(
+          padding: EdgeInsets.only(bottom: 10.h),
+          child: _HistoryCard(entry: entry),
         );
       },
     );
@@ -408,7 +482,7 @@ class _SummaryBar extends StatelessWidget {
         color: Color(0xFF1B4332),
         borderRadius: BorderRadius.vertical(bottom: Radius.zero),
       ),
-      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Row(
         children: [
           _StatChip(
@@ -519,25 +593,81 @@ class _SlotFilterBar extends StatelessWidget {
     (slot: 'EVENING',   label: 'Evening',   icon: Icons.nights_stay_rounded),
   ];
 
-  Color _activeColor(String? slot) {
-    return const Color(0xFF2D6A4F);
-  }
+  static const Color _historyColor = Color(0xFF10B981); // green
 
   @override
   Widget build(BuildContext context) {
+    final isHistory = provider.showHistory;
+
     return Container(
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(vertical: 10.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24.r)),
+      ),
+      padding: EdgeInsets.only(top: 10.h, bottom: 16.h),
       child: SizedBox(
         height: 36.h,
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.symmetric(horizontal: 16.w),
-          children: _filters.map((f) {
-            final selected = provider.selectedSlot == f.slot;
-            final color = _activeColor(f.slot);
-            return GestureDetector(
-              onTap: () => provider.setSlotFilter(f.slot),
+          children: [
+            // ── All / Morning / Afternoon / Evening pills ───
+            ..._filters.map((f) {
+              // A slot pill is active only when NOT in history mode
+              final selected = !isHistory && provider.selectedSlot == f.slot;
+              const color = Color(0xFF2D6A4F);
+              return GestureDetector(
+                onTap: () => provider.setSlotFilter(f.slot),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  margin: EdgeInsets.only(right: 8.w),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 14.w, vertical: 0),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? color : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20.r),
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        f.icon,
+                        size: 13.sp,
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF64748B),
+                      ),
+                      SizedBox(width: 5.w),
+                      Text(
+                        f.label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: selected
+                              ? Colors.white
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            // ── History pill (last) ─────────────────────────────
+            GestureDetector(
+              onTap: provider.toggleHistory,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
@@ -546,12 +676,14 @@ class _SlotFilterBar extends StatelessWidget {
                     horizontal: 14.w, vertical: 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: selected ? color : const Color(0xFFF1F5F9),
+                  color: isHistory
+                      ? _historyColor
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: selected
+                  boxShadow: isHistory
                       ? [
                           BoxShadow(
-                            color: color.withValues(alpha: 0.3),
+                            color: _historyColor.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           )
@@ -562,19 +694,19 @@ class _SlotFilterBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      f.icon,
+                      Icons.history_rounded,
                       size: 13.sp,
-                      color: selected
+                      color: isHistory
                           ? Colors.white
                           : const Color(0xFF64748B),
                     ),
                     SizedBox(width: 5.w),
                     Text(
-                      f.label,
+                      'History',
                       style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w700,
-                        color: selected
+                        color: isHistory
                             ? Colors.white
                             : const Color(0xFF64748B),
                       ),
@@ -582,8 +714,8 @@ class _SlotFilterBar extends StatelessWidget {
                   ],
                 ),
               ),
-            );
-          }).toList(),
+            ),
+          ],
         ),
       ),
     );
@@ -1051,6 +1183,256 @@ class _FeedingItemRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// History card — one completed task row (used by the History filter view)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HistoryCard extends StatelessWidget {
+  final CompletedEntry entry;
+
+  static const Color _green    = Color(0xFF10B981);
+  static const Color _textMain = Color(0xFF1E293B);
+  static const Color _textSub  = Color(0xFF64748B);
+  static const Color _accent   = Color(0xFF2D6A4F);
+
+  const _HistoryCard({required this.entry});
+
+  Color _slotColor(String slot) {
+    switch (slot) {
+      case 'MORNING':   return const Color(0xFFF59E0B);
+      case 'AFTERNOON': return const Color(0xFF3B82F6);
+      case 'EVENING':   return const Color(0xFF8B5CF6);
+      default:          return _textSub;
+    }
+  }
+
+  IconData _slotIcon(String slot) {
+    switch (slot) {
+      case 'MORNING':   return Icons.wb_sunny_rounded;
+      case 'AFTERNOON': return Icons.wb_cloudy_rounded;
+      case 'EVENING':   return Icons.nights_stay_rounded;
+      default:          return Icons.schedule_rounded;
+    }
+  }
+
+  String _slotLabel(String slot) {
+    switch (slot) {
+      case 'MORNING':   return 'Morning';
+      case 'AFTERNOON': return 'Afternoon';
+      case 'EVENING':   return 'Evening';
+      default:          return slot;
+    }
+  }
+
+  String _formatTime(String? iso) {
+    if (iso == null || iso.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final h  = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final m  = dt.minute.toString().padLeft(2, '0');
+      return '$h:${m} ${dt.hour >= 12 ? 'PM' : 'AM'}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final task    = entry.task;
+    final patient = entry.patient;
+    final sc      = _slotColor(entry.slot);
+    final time    = _formatTime(task.completedAt);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Green done dot
+          Container(
+            width: 9.w,
+            height: 9.w,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF10B981),
+            ),
+          ),
+          SizedBox(width: 12.w),
+
+          // Main info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Animal + slot badge
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        patient.displayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _textMain,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(width: 6.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: sc.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_slotIcon(entry.slot),
+                              size: 9.sp, color: sc),
+                          SizedBox(width: 3.w),
+                          Text(
+                            _slotLabel(entry.slot),
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w700,
+                              color: sc,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 3.h),
+
+                // Food name with strikethrough
+                Text(
+                  task.foodItemName,
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _textSub,
+                    decoration: TextDecoration.lineThrough,
+                    decorationColor: _textSub.withValues(alpha: 0.5),
+                  ),
+                ),
+                SizedBox(height: 3.h),
+
+                // Quantity · done-by · time
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 5.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: _accent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(5.r),
+                      ),
+                      child: Text(
+                        '${task.quantity} ${task.unit}',
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _accent,
+                        ),
+                      ),
+                    ),
+                    if (task.completedByName != null) ...[
+                      SizedBox(width: 6.w),
+                      Icon(Icons.person_rounded,
+                          size: 10.sp, color: _green),
+                      SizedBox(width: 2.w),
+                      Text(
+                        task.completedByName!,
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _green,
+                        ),
+                      ),
+                    ],
+                    if (time.isNotEmpty) ...[
+                      SizedBox(width: 6.w),
+                      Icon(Icons.access_time_rounded,
+                          size: 10.sp, color: _textSub),
+                      SizedBox(width: 2.w),
+                      Text(time,
+                          style: GoogleFonts.nunitoSans(
+                              fontSize: 10.sp, color: _textSub)),
+                    ],
+                  ],
+                ),
+
+                // Notes (optional)
+                if (task.notes != null && task.notes!.isNotEmpty) ...[
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(Icons.notes_rounded,
+                          size: 10.sp, color: _textSub),
+                      SizedBox(width: 4.w),
+                      Expanded(
+                        child: Text(
+                          task.notes!,
+                          style: GoogleFonts.nunitoSans(
+                            fontSize: 10.sp,
+                            color: _textSub,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Done badge
+          SizedBox(width: 10.w),
+          Container(
+            padding:
+                EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: _green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(color: _green.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_rounded, size: 10.sp, color: _green),
+                SizedBox(width: 3.w),
+                Text(
+                  'Done',
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w800,
+                    color: _green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Complete-Task bottom sheet (with Speech-to-Text notes)
 // ─────────────────────────────────────────────────────────────────────────────

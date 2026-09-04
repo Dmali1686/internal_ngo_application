@@ -98,6 +98,7 @@ class PatientRegistrationRequest {
   final String? transporterContact;
   final double? weight;
   final double? temperature;
+  final String? condition; // NORMAL | FEVER | INJURY
 
   PatientRegistrationRequest({
     this.age,
@@ -118,6 +119,7 @@ class PatientRegistrationRequest {
     this.transporterContact,
     this.weight,
     this.temperature,
+    this.condition,
   });
 
   Map<String, dynamic> toJson() {
@@ -140,6 +142,7 @@ class PatientRegistrationRequest {
       if (transporterContact != null) 'transporter_contact': transporterContact,
       if (weight != null) 'weight': weight,
       if (temperature != null) 'temperature': temperature,
+      if (condition != null) 'condition': condition,
     };
   }
 }

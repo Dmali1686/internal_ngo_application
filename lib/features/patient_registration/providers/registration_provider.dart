@@ -53,6 +53,9 @@ class RegistrationProvider extends ChangeNotifier {
   bool hasCollar = false;
   Set<String> observations = {};
 
+  // Condition for diet rule matching (NORMAL | FEVER | INJURY)
+  String condition = 'NORMAL';
+
   // Step 5: Medical Assessment
   final TextEditingController symptomsController = TextEditingController();
   final FocusNode symptomsFocus = FocusNode();
@@ -174,6 +177,11 @@ class RegistrationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCondition(String val) {
+    condition = val;
+    notifyListeners();
+  }
+
   void updateRequiredTest(String test, bool val) {
     requiredTests[test] = val;
     notifyListeners();
@@ -290,6 +298,7 @@ class RegistrationProvider extends ChangeNotifier {
     cageNumberController.clear();
     reporterPhotos.clear();
     priority = 'Normal';
+    condition = 'NORMAL';
     mapLocation = null;
     animalType = 'Dog';
     animalTypeId = null;
