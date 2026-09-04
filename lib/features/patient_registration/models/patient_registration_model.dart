@@ -175,6 +175,18 @@ class PatientModel {
   final String? diagnosis;
   final String status;
   final String? qrPayload;
+  final String? frontImageKey; // NEW — S3 object key
+  final String? sideImageKey;  // NEW — S3 object key
+
+  /// Full S3 URL for the front photo. Null if no image was uploaded.
+  String? get frontImageUrl => frontImageKey != null && frontImageKey!.isNotEmpty
+      ? 'https://mh14-patient-images.s3.ap-south-1.amazonaws.com/$frontImageKey'
+      : null;
+
+  /// Full S3 URL for the side photo. Null if no image was uploaded.
+  String? get sideImageUrl => sideImageKey != null && sideImageKey!.isNotEmpty
+      ? 'https://mh14-patient-images.s3.ap-south-1.amazonaws.com/$sideImageKey'
+      : null;
 
   PatientModel({
     required this.id,
@@ -200,6 +212,8 @@ class PatientModel {
     this.diagnosis,
     required this.status,
     this.qrPayload,
+    this.frontImageKey,
+    this.sideImageKey,
   });
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
@@ -227,6 +241,8 @@ class PatientModel {
       diagnosis: json['diagnosis']?.toString(),
       status: json['status']?.toString() ?? 'ADMITTED',
       qrPayload: json['qr_payload']?.toString(),
+      frontImageKey: json['front_image_key']?.toString(),
+      sideImageKey: json['side_image_key']?.toString(),
     );
   }
 
@@ -254,6 +270,8 @@ class PatientModel {
     'diagnosis': diagnosis,
     'status': status,
     'qr_payload': qrPayload,
+    'front_image_key': frontImageKey,
+    'side_image_key': sideImageKey,
   };
 }
 

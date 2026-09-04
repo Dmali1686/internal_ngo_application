@@ -164,6 +164,17 @@ class _ReviewRegistrationScreenState extends State<ReviewRegistrationScreen> {
   }
 
   Future<void> _submitRegistration(BuildContext context, RegistrationProvider provider) async {
+    // Guard: images are mandatory
+    if (provider.frontImage == null || provider.sideImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Both animal photos are required. Please go back and add them.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final data = provider.data;
@@ -206,7 +217,11 @@ class _ReviewRegistrationScreenState extends State<ReviewRegistrationScreen> {
 
     try {
       final apiService = PatientApiService();
-      final response = await apiService.registerPatient(request: request);
+      final response = await apiService.registerPatient(
+        request: request,
+        frontImage: provider.frontImage!,
+        sideImage: provider.sideImage!,
+      );
 
       if (response.success && mounted) {
         context.push('/registration-success');

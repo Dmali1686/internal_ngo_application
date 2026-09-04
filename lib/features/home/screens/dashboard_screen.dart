@@ -12,6 +12,7 @@ import '../../super_admin/screens/super_admin_dashboard_screen.dart';
 import '../../super_admin/screens/admin_dashboard_screen.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
 import '../../tasks/providers/task_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 // Extracted Widgets
 import '../widgets/home_header.dart';
@@ -46,6 +47,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (superAdminProvider.isEmployee) {
         context.read<TaskProvider>().fetchMyTasks();
       }
+      
+      // Initialize Firebase notifications and sync inbox
+      final notificationProvider = context.read<NotificationProvider>();
+      notificationProvider.initializeFirebase();
+      notificationProvider.fetchInbox(refresh: true);
+      
       _checkAndShowLanguageDialog();
     });
   }
@@ -149,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _buildHomeTab(),
                 const RegistrationDashboardScreen(),
-                const AllPatientsScreen(),
+                const AllPatientsScreen(showBackButton: false),
                 const ProfileScreen(),
               ],
             ),

@@ -204,6 +204,18 @@ class ApiEndpoints {
   static String rescueTripDetail(String id) => '/rescue-trips/$id';
 
   // ---------------------------------------------------------------------------
+  // Notifications
+  // ---------------------------------------------------------------------------
+  static const String notificationsToken = '/notifications/token';
+  static const String notificationsInbox = '/notifications/inbox';
+
+  static String notificationsInboxMarkRead(String id) =>
+      '/notifications/inbox/$id/read';
+
+  static String notificationsInboxDelete(String id) =>
+      '/notifications/inbox/$id';
+
+  // ---------------------------------------------------------------------------
   // Public Endpoints
   // ---------------------------------------------------------------------------
   static const String publicCampaigns = '/public/campaigns';

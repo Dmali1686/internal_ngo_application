@@ -1,3 +1,5 @@
+import 'package:image_picker/image_picker.dart';
+
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
@@ -13,17 +15,98 @@ class PatientApiService {
 
   // ---------------------------------------------------------------------------
   // 1. Register a New Patient
-  // POST /api/v1/patients
+  // POST /api/v1/patients  (multipart/form-data)
   // ---------------------------------------------------------------------------
 
+  /// Registers a new patient using multipart/form-data.
+  ///
+  /// Both [frontImage] and [sideImage] are mandatory per the backend contract.
   Future<ApiResponse<dynamic>> registerPatient({
     required PatientRegistrationRequest request,
-  }) {
-    AppLogger.info('PatientApiService', 'registerPatient called');
-    print('========== RESCUE REGISTRATION API REQUEST ==========');
-    print(request.toJson());
-    print('=====================================================');
-    return _client.post(ApiEndpoints.patients, body: request.toJson());
+    required XFile frontImage,
+    required XFile sideImage,
+  }) async {
+    AppLogger.info('PatientApiService', 'registerPatient (multipart) called');
+
+    // Build text form fields
+    final fields = <String, String>{};
+    void addField(String key, String? value) {
+      if (value != null && value.isNotEmpty) fields[key] = value;
+    }
+
+    addField('reporter_name', request.reporterName);
+    addField('reporter_mobile', request.reporterMobile);
+    addField('animal_name', request.animalName);
+    addField('animal_address', request.animalAddress);
+    addField('landmark', request.landmark);
+    addField('animal_type', request.animalType);
+    addField('color', request.color);
+    addField('gender', request.gender);
+    addField('age', request.age);
+    addField('transported_by', request.transportedBy);
+    addField('transporter_contact', request.transporterContact);
+    addField('cage_number', request.cageNumber);
+    addField('symptoms', request.symptoms);
+    addField('tests', request.tests);
+    addField('diagnosis', request.diagnosis);
+    addField('condition', request.condition);
+
+    if (request.weight != null) {
+      fields['weight'] = request.weight.toString();
+    }
+    if (request.temperature != null) {
+      fields['temperature'] = request.temperature.toString();
+    }
+    // is_sterilized must always be sent as a string
+    fields['is_sterilized'] = (request.isSterilized ?? false) ? 'true' : 'false';
+
+    // ─── DEBUG: Print everything being sent ───────────────────────────────────
+    final frontBytes = await frontImage.length();
+    final sideBytes  = await sideImage.length();
+
+    print('');
+    print('╔══════════════════════════════════════════════════════════╗');
+    print('║       PATIENT REGISTRATION — MULTIPART REQUEST           ║');
+    print('╚══════════════════════════════════════════════════════════╝');
+    print('📋 TEXT FIELDS (${fields.length} total):');
+    fields.forEach((k, v) => print('   $k = $v'));
+    print('📸 FILES:');
+    print('   front_image → ${frontImage.path}');
+    print('   front_image size → ${(frontBytes / 1024).toStringAsFixed(1)} KB');
+    print('   side_image  → ${sideImage.path}');
+    print('   side_image size  → ${(sideBytes / 1024).toStringAsFixed(1)} KB');
+    print('──────────────────────────────────────────────────────────');
+    // ─────────────────────────────────────────────────────────────────────────
+
+    ApiResponse<dynamic> response;
+    try {
+      response = await _client.postMultipart(
+        ApiEndpoints.patients,
+        fields: fields,
+        files: [
+          MultipartFileInput(field: 'front_image', path: frontImage.path),
+          MultipartFileInput(field: 'side_image', path: sideImage.path),
+        ],
+      );
+    } catch (e) {
+      // ─── DEBUG: print error ───────────────────────────────────────────────
+      print('❌ MULTIPART REQUEST FAILED');
+      print('   Error type: ${e.runtimeType}');
+      print('   Error: $e');
+      print('══════════════════════════════════════════════════════════');
+      rethrow;
+    }
+
+    // ─── DEBUG: Print what the backend returned ───────────────────────────────
+    print('✅ BACKEND RESPONSE:');
+    print('   success: ${response.success}');
+    print('   statusCode: ${response.statusCode}');
+    print('   errorMessage: ${response.errorMessage}');
+    print('   data: ${response.data}');
+    print('══════════════════════════════════════════════════════════');
+    print('');
+
+    return response;
   }
 
   // ---------------------------------------------------------------------------

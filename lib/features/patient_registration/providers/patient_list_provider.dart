@@ -146,6 +146,11 @@ class PatientListProvider extends ChangeNotifier {
             .map((e) => PatientModel.fromJson(e as Map<String, dynamic>))
             .toList();
 
+        // DEBUG: Log image key info for first few patients
+        for (final pt in newPatients.take(3)) {
+          print('[DEBUG] Patient ${pt.caseId}: frontImageKey=${pt.frontImageKey}, sideImageKey=${pt.sideImageKey}, frontImageUrl=${pt.frontImageUrl}');
+        }
+
         _patients = [..._patients, ...newPatients];
         _total = (pagination?['total'] as num?)?.toInt() ?? _patients.length;
         _totalPages = (pagination?['total_pages'] as num?)?.toInt() ?? 1;

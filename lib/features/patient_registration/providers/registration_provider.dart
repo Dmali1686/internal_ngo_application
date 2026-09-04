@@ -14,8 +14,11 @@ class RegistrationProvider extends ChangeNotifier {
   final TextEditingController alternateNumberController =
       TextEditingController();
   final FocusNode alternateNumberFocus = FocusNode();
-  List<XFile> reporterPhotos = [];
   bool isEmergency = false;
+
+  // Animal photos — required by the backend
+  XFile? frontImage; // front-facing photo of the animal
+  XFile? sideImage;  // side-facing photo of the animal
 
   // Step 2: Location
   final TextEditingController addressController = TextEditingController();
@@ -92,15 +95,14 @@ class RegistrationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addReporterPhoto(XFile photo) {
-    if (reporterPhotos.length < 4) {
-      reporterPhotos.add(photo);
-      notifyListeners();
-    }
+
+  void setFrontImage(XFile? file) {
+    frontImage = file;
+    notifyListeners();
   }
 
-  void removeReporterPhoto(int index) {
-    reporterPhotos.removeAt(index);
+  void setSideImage(XFile? file) {
+    sideImage = file;
     notifyListeners();
   }
 
@@ -296,7 +298,9 @@ class RegistrationProvider extends ChangeNotifier {
     medicineStartedController.clear();
     transporterContactController.clear();
     cageNumberController.clear();
-    reporterPhotos.clear();
+
+    frontImage = null;
+    sideImage = null;
     priority = 'Normal';
     condition = 'NORMAL';
     mapLocation = null;

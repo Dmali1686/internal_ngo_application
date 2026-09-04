@@ -100,7 +100,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                                 '${provider.addressController.text}, ${provider.cityController.text}',
                             'condition': provider.symptomsController.text,
                             'urgency': provider.priority,
-                            'photos': provider.reporterPhotos,
+                            'photos': [provider.frontImage, provider.sideImage].whereType<Object>().toList(),
                           },
                         );
                       },

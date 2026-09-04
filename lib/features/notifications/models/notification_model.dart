@@ -16,6 +16,8 @@ class NotificationModel {
   final String message;
   final DateTime createdAt;
   bool isRead;
+  final String? link;
+  final String? userId;
   final Map<String, dynamic>? metadata;
 
   NotificationModel({
@@ -25,6 +27,8 @@ class NotificationModel {
     required this.message,
     required this.createdAt,
     this.isRead = false,
+    this.link,
+    this.userId,
     this.metadata,
   });
 
@@ -92,6 +96,8 @@ class NotificationModel {
       message: json['message'] ?? '',
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       isRead: json['is_read'] ?? false,
+      link: json['link'],
+      userId: json['user_id'],
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -104,6 +110,8 @@ class NotificationModel {
       'message': message,
       'created_at': createdAt.toIso8601String(),
       'is_read': isRead,
+      if (link != null) 'link': link,
+      if (userId != null) 'user_id': userId,
       if (metadata != null) 'metadata': metadata,
     };
   }

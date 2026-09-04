@@ -7,6 +7,8 @@ import '../providers/notification_provider.dart';
 import '../screens/notification_center_screen.dart';
 import 'notification_popup_card.dart';
 
+import 'package:go_router/go_router.dart';
+
 /// Wraps the entire app to display popup toast notifications at the top
 /// whenever a new notification is added via [NotificationProvider].
 ///
@@ -78,13 +80,20 @@ class _NotificationPopupOverlayState extends State<NotificationPopupOverlay> {
     });
   }
 
-  void _onPopupTap(String id) {
-    _dismissPopup(id);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const NotificationCenterScreen(),
-      ),
-    );
+  void _onPopupTap(NotificationModel notification) {
+    _dismissPopup(notification.id);
+    
+    if (notification.link != null && notification.link!.isNotEmpty) {
+      // Deep link to the provided route
+      GoRouter.of(context).push(notification.link!);
+    } else {
+      // Fallback to notification center
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const NotificationCenterScreen(),
+        ),
+      );
+    }
   }
 
   @override
@@ -125,7 +134,7 @@ class _NotificationPopupOverlayState extends State<NotificationPopupOverlay> {
                     key: ValueKey(entry.id),
                     entry: entry,
                     onDismiss: () => _dismissPopup(entry.id),
-                    onTap: () => _onPopupTap(entry.id),
+                    onTap: () => _onPopupTap(entry.notification),
                   );
                 }).toList(),
               ),

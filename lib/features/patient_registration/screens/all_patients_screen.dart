@@ -613,16 +613,11 @@ class _PatientCardState extends State<_PatientCard>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Animal avatar
-                    Container(
-                      width: 50.w,
-                      height: 50.h,
-                      decoration: BoxDecoration(
-                        color: widget.statusColor.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(14.r),
-                      ),
-                      child: Icon(widget.animalIcon,
-                          color: widget.statusColor, size: 26.w),
+                    // Animal avatar — front photo as DP, icon fallback
+                    _AnimalAvatar(
+                      imageUrl: widget.patient.frontImageUrl,
+                      icon: widget.animalIcon,
+                      color: widget.statusColor,
                     ),
                     SizedBox(width: 12.w),
                     // Name + case ID
@@ -1047,5 +1042,64 @@ class _FilterSheetState extends State<_FilterSheet> {
         color: AppColors.textMain,
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Animal Avatar — shows front_image from S3, falls back to icon
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AnimalAvatar extends StatelessWidget {
+  final String? imageUrl;
+  final IconData icon;
+  final Color color;
+
+  const _AnimalAvatar({
+    required this.imageUrl,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14.r),
+      child: Container(
+        width: 50.w,
+        height: 50.h,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: imageUrl != null
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _iconFallback(),
+                loadingBuilder: (_, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: SizedBox(
+                      width: 18.w,
+                      height: 18.w,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: color,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              )
+            : _iconFallback(),
+      ),
+    );
+  }
+
+  Widget _iconFallback() {
+    return Icon(icon, color: color, size: 26.w);
   }
 }

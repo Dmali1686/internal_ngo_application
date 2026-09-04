@@ -141,182 +141,399 @@ class Step1ReporterDetails extends StatelessWidget {
   Widget _buildPhotoCaptureBox(BuildContext context) {
     final formProvider = context.watch<RegistrationProvider>();
     final voiceService = context.watch<VoiceService>();
-    final angles = ['Front Angle', 'Left Side', 'Right Side', 'Back/Wound'];
-    final placeholders = [
-      'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1537151608804-ea6f1cb5b9f7?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=300&q=80',
-    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Capture Animal Photos (Required 4 Angles)',
+          'Capture Animal Photos (Required)',
           style: GoogleFonts.nunitoSans(
             fontSize: 14.sp,
             fontWeight: FontWeight.bold,
             color: Colors.grey.shade700,
           ),
         ),
-        SizedBox(height: 12.h),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 4,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-            childAspectRatio: 1,
+        SizedBox(height: 4.h),
+        Text(
+          'Take a clear front and side photo of the animal',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 12.sp,
+            color: Colors.grey.shade500,
           ),
-          itemBuilder: (context, index) {
-            final hasPhoto = index < formProvider.reporterPhotos.length;
-            final isNext = index == formProvider.reporterPhotos.length;
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
+            Expanded(
+              child: _buildPhotoCard(
+                context: context,
+                label: 'Front Photo',
+                subtitle: 'Facing the camera',
+                icon: Icons.face_rounded,
+                file: formProvider.frontImage,
+                color: const Color(0xFF006E1C),
+                isDisabled: voiceService.isVoiceModeActive,
+                onTap: () => _showImageSourceSheet(context, isFront: true),
+                onRemove: () => formProvider.setFrontImage(null),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: _buildPhotoCard(
+                context: context,
+                label: 'Side Photo',
+                subtitle: 'Profile / side view',
+                icon: Icons.switch_camera_rounded,
+                file: formProvider.sideImage,
+                color: const Color(0xFF0057A8),
+                isDisabled: voiceService.isVoiceModeActive,
+                onTap: () => _showImageSourceSheet(context, isFront: false),
+                onRemove: () => formProvider.setSideImage(null),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        // Status row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStatusDot(
+              filled: formProvider.frontImage != null,
+              label: 'Front',
+            ),
+            SizedBox(width: 16.w),
+            _buildStatusDot(
+              filled: formProvider.sideImage != null,
+              label: 'Side',
+            ),
+          ],
+        ),
+        if (formProvider.frontImage == null || formProvider.sideImage == null) ...[
+          SizedBox(height: 8.h),
+          Center(
+            child: Text(
+              '⚠ Both photos are required to continue',
+              style: GoogleFonts.nunitoSans(
+                fontSize: 12.sp,
+                color: const Color(0xFFB45309),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
-            return GestureDetector(
-              onTap: voiceService.isVoiceModeActive
-                  ? null
-                  : () async {
-                      if (hasPhoto) {
-                        formProvider.removeReporterPhoto(index);
-                      } else if (isNext) {
-                        final picker = ImagePicker();
-                        final pickedFile = await picker.pickImage(
-                          source: ImageSource.camera,
-                        );
-                        if (pickedFile != null) {
-                          formProvider.addReporterPhoto(pickedFile);
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Please take the ${angles[formProvider.reporterPhotos.length]} photo first.',
-                            ),
+  Widget _buildPhotoCard({
+    required BuildContext context,
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required XFile? file,
+    required Color color,
+    required bool isDisabled,
+    required VoidCallback onTap,
+    required VoidCallback onRemove,
+  }) {
+    final hasImage = file != null;
+
+    return GestureDetector(
+      onTap: isDisabled ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        height: 160.h,
+        decoration: BoxDecoration(
+          color: hasImage ? Colors.transparent : color.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: hasImage ? color : color.withOpacity(0.35),
+            width: hasImage ? 2.5 : 1.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15.r),
+          child: hasImage
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      File(file.path),
+                      fit: BoxFit.cover,
+                    ),
+                    Positioned(
+                      top: 6.h,
+                      right: 6.w,
+                      child: GestureDetector(
+                        onTap: onRemove,
+                        child: Container(
+                          width: 28.w,
+                          height: 28.w,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.55),
+                            shape: BoxShape.circle,
                           ),
-                        );
-                      }
-                    },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFBF9F9),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: hasPhoto
-                        ? const Color(0xFF4CAF50)
-                        : (isNext
-                              ? const Color(0xFF006E1C)
-                              : Colors.grey.shade300),
-                    style: BorderStyle.solid,
-                    width: hasPhoto || isNext ? 2 : 1,
-                  ),
-                  image: hasPhoto
-                      ? DecorationImage(
-                          image: FileImage(
-                            File(formProvider.reporterPhotos[index].path),
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                      : DecorationImage(
-                          image: NetworkImage(placeholders[index]),
-                          fit: BoxFit.cover,
-                          colorFilter: ColorFilter.mode(
-                            Colors.white.withOpacity(isNext ? 0.6 : 0.85),
-                            BlendMode.lighten,
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                            size: 16.w,
                           ),
                         ),
-                ),
-                child: hasPhoto
-                    ? Stack(
-                        children: [
-                          Positioned(
-                            top: 8.h,
-                            right: 8.w,
-                            child: Container(
-                              padding: EdgeInsets.all(4.w),
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 16.w,
-                              ),
-                            ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 6.h,
+                          horizontal: 10.w,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.55),
+                              Colors.transparent,
+                            ],
                           ),
-                          Positioned(
-                            bottom: 0.h,
-                            left: 0.w,
-                            right: 0.w,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 6.h),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.vertical(
-                                  bottom: Radius.circular(14.r),
-                                ),
-                              ),
-                              child: Text(
-                                angles[index],
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.nunitoSans(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: isNext
-                                  ? const Color(0xFF4CAF50)
-                                  : Colors.grey.shade400,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.add_a_photo,
-                              color: Colors.white,
-                              size: 20.w,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 2.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(
-                                isNext ? 0.6 : 0.4,
-                              ),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Text(
-                              angles[index],
-                              textAlign: TextAlign.center,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                color: Colors.white, size: 14.w),
+                            SizedBox(width: 5.w),
+                            Text(
+                              label,
                               style: GoogleFonts.nunitoSans(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: color, size: 22.w),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      label,
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1B1C1C),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.nunitoSans(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 5.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_a_photo_rounded,
+                              size: 13.w, color: color),
+                          SizedBox(width: 5.w),
+                          Text(
+                            'Add Photo',
+                            style: GoogleFonts.nunitoSans(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w700,
+                              color: color,
                             ),
                           ),
                         ],
                       ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  void _showImageSourceSheet(BuildContext context, {required bool isFront}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 30.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
               ),
-            );
-          },
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              isFront ? 'Front Photo' : 'Side Photo',
+              style: GoogleFonts.nunitoSans(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1B1C1C),
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Choose how you want to add the photo',
+              style: GoogleFonts.nunitoSans(
+                fontSize: 13.sp,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSourceTile(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    color: const Color(0xFF006E1C),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(context, isFront: isFront, source: ImageSource.camera);
+                    },
+                  ),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: _buildSourceTile(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    color: const Color(0xFF0057A8),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(context, isFront: isFront, source: ImageSource.gallery);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(
+    BuildContext context, {
+    required bool isFront,
+    required ImageSource source,
+  }) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1920,
+      maxHeight: 1920,
+    );
+    if (picked == null) return;
+    final provider = context.read<RegistrationProvider>();
+    if (isFront) {
+      provider.setFrontImage(picked);
+    } else {
+      provider.setSideImage(picked);
+    }
+  }
+
+  Widget _buildSourceTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 22.h),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: color.withOpacity(0.20)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 34.w, color: color),
+            SizedBox(height: 10.h),
+            Text(
+              label,
+              style: GoogleFonts.nunitoSans(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusDot({required bool filled, required String label}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 10.w,
+          height: 10.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: filled ? const Color(0xFF006E1C) : Colors.grey.shade300,
+          ),
+        ),
+        SizedBox(width: 6.w),
+        Text(
+          label,
+          style: GoogleFonts.nunitoSans(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w600,
+            color: filled ? const Color(0xFF006E1C) : Colors.grey.shade500,
+          ),
         ),
       ],
     );

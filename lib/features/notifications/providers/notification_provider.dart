@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/notification_model.dart';
+import '../services/notification_service.dart';
 
 /// Manages notification state across the app.
 ///
@@ -10,6 +11,15 @@ import '../models/notification_model.dart';
 class NotificationProvider extends ChangeNotifier {
   List<NotificationModel> _notifications = [];
   List<NotificationModel> get notifications => _notifications;
+
+  final NotificationService _notificationService = NotificationService();
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  final int _limit = 20;
+
+  bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
 
   /// The most recent notification that should trigger a popup toast.
   /// The overlay reads this, shows the popup, then calls [clearLatestPopup].
@@ -64,6 +74,61 @@ class NotificationProvider extends ChangeNotifier {
     });
   }
 
+  // ── API Integration ────────────────────────────────────────────────────────
+
+  /// Initialize Firebase FCM and register token (called post-login & startup)
+  Future<void> initializeFirebase() async {
+    await _notificationService.initializeAndRegisterToken();
+  }
+
+  /// Fetch inbox from backend API (with pagination)
+  Future<void> fetchInbox({bool refresh = false}) async {
+    if (_isLoading || (!_hasMore && !refresh)) return;
+
+    if (refresh) {
+      _offset = 0;
+      _hasMore = true;
+      // Do not clear _notifications immediately to avoid UI flash,
+      // let the new data replace it.
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _notificationService.fetchInbox(limit: _limit, offset: _offset);
+      
+      if (data.isNotEmpty) {
+        final List<NotificationModel> fetched = data.map((e) => NotificationModel.fromJson(e)).toList();
+        
+        if (refresh) {
+          _notifications = fetched;
+        } else {
+          _notifications.addAll(fetched);
+        }
+        
+        _offset += data.length;
+        if (data.length < _limit) {
+          _hasMore = false;
+        }
+      } else {
+        _hasMore = false;
+        if (refresh) {
+          // If refresh and empty, fallback to mock data as requested
+          _seedMockData();
+        }
+      }
+    } catch (e) {
+      if (refresh && _notifications.isEmpty) {
+        // Fallback to mock data on error if completely empty
+        _seedMockData();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // ── TTS setup ──────────────────────────────────────────────────────────────
 
   Future<void> _initTts() async {
@@ -116,6 +181,11 @@ class NotificationProvider extends ChangeNotifier {
     if (idx != -1) {
       _notifications[idx].isRead = true;
       notifyListeners();
+      
+      // Ignore mock ids
+      if (!id.startsWith('demo') && !id.startsWith('n')) {
+        _notificationService.markAsRead(id);
+      }
     }
   }
 
@@ -143,6 +213,11 @@ class NotificationProvider extends ChangeNotifier {
   void removeNotification(String id) {
     _notifications.removeWhere((n) => n.id == id);
     notifyListeners();
+
+    // Ignore mock ids
+    if (!id.startsWith('demo') && !id.startsWith('n')) {
+      _notificationService.deleteNotification(id);
+    }
   }
 
   /// Clears all notifications.

@@ -115,11 +115,31 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   Future<void> _submitRegistration() async {
     if (_isSubmitting) return;
 
+    final provider = context.read<RegistrationProvider>();
+
+    // Validate images before doing anything else
+    if (provider.frontImage == null || provider.sideImage == null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Photos Required'),
+          content: const Text(
+            'Please go back to Step 4 and add both the front and side photos of the animal.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
-
-    final provider = context.read<RegistrationProvider>();
 
     // Map gender to API-expected format (MALE / FEMALE / UNKNOWN)
     String apiGender;
@@ -135,7 +155,6 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       ...provider.symptomTags,
       if (provider.symptomsController.text.isNotEmpty)
         provider.symptomsController.text,
-      // The _observations list from Step 3 Animal Details
       ...provider.observations,
     ];
 
@@ -178,8 +197,8 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
       diagnosis: provider.diagnosisController.text.isNotEmpty
           ? provider.diagnosisController.text
           : null,
-      tests: provider.testsController.text.isNotEmpty 
-          ? provider.testsController.text 
+      tests: provider.testsController.text.isNotEmpty
+          ? provider.testsController.text
           : null,
       transportedBy: 'Ambulance',
       transporterContact: provider.transporterContactController.text.isNotEmpty
@@ -193,7 +212,11 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
 
     try {
       final apiService = PatientApiService();
-      final response = await apiService.registerPatient(request: request);
+      final response = await apiService.registerPatient(
+        request: request,
+        frontImage: provider.frontImage!,
+        sideImage: provider.sideImage!,
+      );
 
       if (!mounted) return;
 
@@ -336,7 +359,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${_currentStep + 1} of 4',
+                'Step ${_currentStep + 1} of ${_steps.length}',
                 style: GoogleFonts.nunitoSans(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
@@ -371,7 +394,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                     ),
                   ),
                 ),
-                Expanded(flex: 4 - (_currentStep + 1), child: const SizedBox()),
+                Expanded(flex: _steps.length - (_currentStep + 1), child: const SizedBox()),
               ],
             ),
           ),
@@ -422,7 +445,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           if (_currentStep > 0) SizedBox(width: 16.w),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentStep == 3
+              onPressed: _currentStep == _steps.length - 1
                   ? _isSubmitting
                         ? null
                         : _submitRegistration
@@ -448,14 +471,14 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _currentStep == 3 ? 'Submit Rescue' : 'Next Step',
+                          _currentStep == _steps.length - 1 ? 'Submit Rescue' : 'Next Step',
                           style: GoogleFonts.nunitoSans(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        if (_currentStep < 3) ...[
+                        if (_currentStep < _steps.length - 1) ...[
                           SizedBox(width: 8.w),
                           Icon(
                             Icons.arrow_forward,

@@ -7,9 +7,10 @@ class ApiConfig {
 
   /// The base URL of the backend server.
   /// Change this value when switching between environments.
-  // static const String baseUrl = 'http://3.111.39.189';
-  static const String baseUrl = 'http://192.168.31.162:8080';
-  // static const String baseUrl = 'http://10.215.104.133:8080';
+  static const String baseUrl = 'http://3.111.39.189';
+  // static const String baseUrl = 'http://192.168.31.162:8081';
+// static const String baseUrl = 'http://10.139.20.133:8081';
+
   
 
   

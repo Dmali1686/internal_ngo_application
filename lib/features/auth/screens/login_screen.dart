@@ -12,6 +12,7 @@ import '../../../core/services/auth_storage_service.dart';
 import '../../../core/network/api_exceptions.dart';
 import '../services/auth_api_service.dart';
 import '../../super_admin/providers/super_admin_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 /// Premium login screen for MH14 Animal Hospital.
 ///
@@ -202,6 +203,10 @@ class _LoginScreenState extends State<LoginScreen> {
         AppLogger.info('LoginScreen', 'Login successful. Navigating...');
         context.read<SuperAdminProvider>().setRole(_selectedRole);
         AuthStorageService().saveRole(_selectedRole); // persist role for app restart
+        
+        // Initialize FCM token
+        context.read<NotificationProvider>().initializeFirebase();
+        
         context.go('/dashboard-transition');
       }
     } on ApiException catch (e) {

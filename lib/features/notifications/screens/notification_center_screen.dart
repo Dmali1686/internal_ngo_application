@@ -6,12 +6,39 @@ import '../../../core/theme/app_colors.dart';
 import '../models/notification_model.dart';
 import '../providers/notification_provider.dart';
 
+import 'package:go_router/go_router.dart';
+
 /// Full-page notification center — opened from the bell icon.
-class NotificationCenterScreen extends StatelessWidget {
+class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key});
 
+  @override
+  State<NotificationCenterScreen> createState() => _NotificationCenterScreenState();
+}
+
+class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   static const Color _primary = Color(0xFF1E293B);
   static const Color _accent = Color(0xFF0F766E);
+  
+  final ScrollController _scrollController = ScrollController();
+  
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+  
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<NotificationProvider>().fetchInbox();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,23 +236,37 @@ class NotificationCenterScreen extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primaryGreen,
-      onRefresh: () async {
-        // Placeholder — will hit API in the future.
-        await Future.delayed(const Duration(milliseconds: 500));
-      },
+      onRefresh: () => provider.fetchInbox(refresh: true),
       child: ListView.builder(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
         padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 100.h),
-        itemCount: grouped.length,
-        itemBuilder: (context, groupIndex) {
-          final label = grouped.keys.elementAt(groupIndex);
+        itemCount: grouped.length + (provider.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == grouped.length) {
+            return Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.h),
+              child: Center(
+                child: SizedBox(
+                  width: 24.w,
+                  height: 24.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.w,
+                    color: AppColors.primaryGreen,
+                  ),
+                ),
+              ),
+            );
+          }
+          
+          final label = grouped.keys.elementAt(index);
           final items = grouped[label]!;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (groupIndex > 0) SizedBox(height: 10.h),
+              if (index > 0) SizedBox(height: 10.h),
               // Day label
               Padding(
                 padding: EdgeInsets.only(bottom: 10.h, left: 4.w),
@@ -341,6 +382,9 @@ class _NotificationCard extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           context.read<NotificationProvider>().markAsRead(n.id);
+          if (n.link != null && n.link!.isNotEmpty) {
+            GoRouter.of(context).push(n.link!);
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
