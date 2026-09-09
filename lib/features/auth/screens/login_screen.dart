@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/network/api_exceptions.dart';
 import '../../../core/widgets/paw_pattern_painter.dart';
+import '../../../core/services/auth_storage_service.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../services/auth_api_service.dart';
+import '../../super_admin/providers/super_admin_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 /// Premium login screen for MH14 Animal Hospital.
 ///
@@ -27,19 +31,24 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthApiService();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String _selectedRole = 'Employee'; // Default role
+  
+  final List<String> _roles = ['Employee', 'Admin', 'Super Admin'];
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _showErrorDialog(String message) {
+    // ignore: unused_local_variable
+    final unused = message; // Keep for future use
     showDialog(
       context: context,
       builder: (context) {
@@ -127,9 +136,107 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  String _getAccessIdForRole(String role) {
+    switch (role) {
+      case 'Super Admin':
+        return 'b4fc7beb-8d38-440e-b9e6-88e0e01cd4c6';
+      case 'Admin':
+        return '1b8fc8a0-bcfd-4857-9854-1e48285dd4ba';
+      case 'Employee':
+        return '2c140a47-c9db-4bbb-b4db-45c87a848467';
+      default:
+        return '2c140a47-c9db-4bbb-b4db-45c87a848467';
+    }
+  }
+
   Future<void> _handleLogin() async {
-    AppLogger.action('LoginScreen', 'Login bypassed for testing UI screens');
-    context.go('/dashboard-transition');
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text;
+
+    // ── Input validation ─────────────────────────────────────────────────────
+    if (identifier.isEmpty || password.isEmpty) {
+      _showErrorDialog(
+        'Please enter your mobile number and password.',
+      );
+      return;
+    }
+
+    if (identifier.length != 10 || int.tryParse(identifier) == null) {
+      _showErrorDialog('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    debugPrint('====== DEBUG LOGIN ======');
+    debugPrint('Role: $_selectedRole');
+    debugPrint('Identifier: $identifier');
+    debugPrint('Password: $password');
+    debugPrint('=========================');
+
+    AppLogger.action('LoginScreen', '--- LOGIN ATTEMPT ---');
+    AppLogger.info('LoginScreen', 'Role: $_selectedRole | Identifier: $identifier');
+
+    try {
+      final response = await _authService.login(
+        mobile: identifier,
+        password: password,
+        accessId: _getAccessIdForRole(_selectedRole),
+      );
+
+      debugPrint('====== DEBUG LOGIN RESPONSE ======');
+      debugPrint('Success: ${response.success}');
+      debugPrint('Status Code: ${response.statusCode}');
+      debugPrint('Data: ${response.data}');
+      debugPrint('Error: ${response.errorMessage}');
+      debugPrint('==================================');
+
+      AppLogger.info(
+        'LoginScreen',
+        'Response success=${response.success} | HTTP ${response.statusCode}',
+      );
+
+      if (!mounted) return;
+
+      if (response.success) {
+        // ✅ Credentials correct — navigate to dashboard
+        AppLogger.info('LoginScreen', 'Login successful. Navigating...');
+        context.read<SuperAdminProvider>().setRole(_selectedRole);
+        AuthStorageService().saveRole(_selectedRole); // persist role for app restart
+        
+        // Initialize FCM token
+        context.read<NotificationProvider>().initializeFirebase();
+        
+        context.go('/dashboard-transition');
+      }
+    } on ApiException catch (e) {
+      // ❌ Backend rejected credentials — show user-friendly message
+      final code = e.statusCode;
+      String msg;
+
+      if (code == 400) {
+        msg = 'Please check your input formats.';
+      } else if (code == 401) {
+        // This will display exactly why it failed (e.g. wrong password, deactivated, wrong role)
+        msg = e.message;
+      } else if (code == 500) {
+        msg = 'System error. Please contact the administrator.';
+      } else {
+        msg = e.message.isNotEmpty ? e.message : 'Login failed. Please check your credentials and try again.';
+      }
+
+      AppLogger.error('LoginScreen', 'Login failed (HTTP $code): ${e.message}');
+      if (mounted) _showErrorDialog(msg);
+    } catch (e) {
+      AppLogger.error('LoginScreen', 'Network exception during login: $e');
+      if (mounted) {
+        _showErrorDialog(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -259,13 +366,19 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           SizedBox(height: 32.h),
 
-          // Email Field
-          _buildTextFieldLabel(AppStrings.emailLabel),
+          // Role Selection
+          _buildTextFieldLabel('Login Role'),
+          SizedBox(height: 8.h),
+          _buildRoleDropdown(),
+          SizedBox(height: 20.h),
+
+          // Identifier Field (Mobile)
+          _buildTextFieldLabel('Mobile Number *'),
           SizedBox(height: 8.h),
           _buildTextField(
-            controller: _emailController,
-            hint: AppStrings.emailHint,
-            keyboardType: TextInputType.emailAddress,
+            controller: _identifierController,
+            hint: 'e.g. 9876543210',
+            keyboardType: TextInputType.phone,
           ),
           SizedBox(height: 20.h),
 
@@ -333,6 +446,50 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown() {
+    return InputDecorator(
+      decoration: InputDecoration(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: AppColors.primaryGreen, width: 2.w),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedRole,
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade600),
+          style: GoogleFonts.nunitoSans(fontSize: 15.sp, color: AppColors.textMain),
+          isExpanded: true,
+          items: _roles.map((role) {
+            return DropdownMenuItem<String>(
+              value: role,
+              child: Text(role),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedRole = value;
+                _identifierController.clear();
+              });
+            }
+          },
+        ),
       ),
     );
   }

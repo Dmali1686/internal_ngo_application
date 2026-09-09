@@ -1,4 +1,4 @@
-package com.ngo.ngo_internal_operation
+package org.mh14.internal
 
 import io.flutter.embedding.android.FlutterActivity
 

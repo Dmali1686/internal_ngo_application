@@ -22,6 +22,7 @@ class _EditPatientScreenState extends State<EditPatientScreen> {
   late TextEditingController _nameController;
   late TextEditingController _ageController;
   late TextEditingController _weightController;
+  late TextEditingController _temperatureController;
   late TextEditingController _descriptionController;
   late TextEditingController _addressController;
 
@@ -42,6 +43,9 @@ class _EditPatientScreenState extends State<EditPatientScreen> {
     );
     _weightController = TextEditingController(
       text: widget.patient['weight']?.toString() ?? '',
+    );
+    _temperatureController = TextEditingController(
+      text: widget.patient['temperature']?.toString() ?? '',
     );
     _descriptionController = TextEditingController(
       text: widget.patient['description']?.toString() ?? '',
@@ -81,6 +85,7 @@ class _EditPatientScreenState extends State<EditPatientScreen> {
     _nameController.dispose();
     _ageController.dispose();
     _weightController.dispose();
+    _temperatureController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
     super.dispose();
@@ -93,11 +98,13 @@ class _EditPatientScreenState extends State<EditPatientScreen> {
 
     try {
       final double? weight = double.tryParse(_weightController.text);
+      final double? temp = double.tryParse(_temperatureController.text);
 
       final updates = {
         "animal_name": _nameController.text.trim(),
         "age": _ageController.text.trim(),
         if (weight != null) "weight": weight,
+        if (temp != null) "temperature": temp,
         "description": _descriptionController.text.trim(),
         "address": _addressController.text.trim(),
         "gender": _selectedGender,
@@ -204,6 +211,14 @@ class _EditPatientScreenState extends State<EditPatientScreen> {
                           child: _buildTextField(
                             'Weight (kg)',
                             _weightController,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: _buildTextField(
+                            'Temp (°F)',
+                            _temperatureController,
                             keyboardType: TextInputType.number,
                           ),
                         ),

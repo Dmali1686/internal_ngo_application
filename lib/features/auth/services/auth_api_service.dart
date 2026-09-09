@@ -11,17 +11,19 @@ class AuthApiService {
   final ApiClient _client = ApiClient();
   final AuthStorageService _authStorage = AuthStorageService();
 
-  /// Login an internal user.
-  /// `POST /api/v1/auth/login`
-  ///
-  /// Returns the auth response with access + refresh tokens.
+  /// Login an internal user based on role.
   Future<ApiResponse<dynamic>> login({
-    required String email,
+    required String mobile, 
     required String password,
+    required String accessId, 
   }) async {
     final response = await _client.post(
       ApiEndpoints.authLogin,
-      body: {'email': email, 'password': password},
+      body: {
+        'mobile': mobile,
+        'password': password,
+        'access_id': accessId,
+      },
     );
 
     // Auto-store tokens on successful login.
@@ -33,8 +35,17 @@ class AuthApiService {
         parsedUserId = data['user_id'].toString();
       } else if (data['user'] is String) {
         parsedUserId = data['user'];
-      } else if (data['user'] is Map) {
-        parsedUserId = data['user']['id']?.toString();
+      }
+
+      bool isDoc = false;
+      if (data['user'] is Map) {
+        final userMap = data['user'] as Map;
+        parsedUserId = userMap['id']?.toString();
+        final fullName = userMap['full_name']?.toString().toLowerCase() ?? '';
+        final empCode = userMap['employee_code']?.toString().toLowerCase() ?? '';
+        if (fullName.startsWith('dr.') || fullName.startsWith('dr ') || empCode.contains('doc')) {
+          isDoc = true;
+        }
       }
 
       _authStorage.saveTokens(
@@ -42,6 +53,46 @@ class AuthApiService {
         refreshToken: data['refresh_token'] ?? '',
         userId: parsedUserId,
       );
+      _authStorage.setIsDoctor(isDoc);
+      
+      // Fetch profile to get department_id, position title and other details
+      try {
+        final profileRes = await getProfile();
+        if (profileRes.success && profileRes.data is Map) {
+          final profileMap = profileRes.data as Map;
+          if (profileMap['department_id'] != null) {
+            _authStorage.setDepartmentId(profileMap['department_id'].toString());
+          }
+          // Store department name so we can show the dept card even with 0 tasks.
+          final deptName = profileMap['department_name']?.toString() ??
+              profileMap['department']?['name']?.toString();
+          if (deptName != null && deptName.isNotEmpty) {
+            _authStorage.setDepartmentName(deptName);
+          }
+          // Save the backend position/role title (e.g. 'Medical HOD', 'Veterinarian')
+          final backendRole = profileMap['role']?.toString() ??
+              profileMap['position_title']?.toString() ??
+              profileMap['position']?.toString() ??
+              profileMap['access_category']?.toString();
+          if (backendRole != null && backendRole.isNotEmpty) {
+            _authStorage.setPositionTitle(backendRole);
+            // Auto-detect if the user is a doctor/HOD from their backend role
+            final roleLower = backendRole.toLowerCase();
+            if (!isDoc &&
+                (roleLower.contains('doctor') ||
+                    roleLower.contains('dr.') ||
+                    roleLower.contains('veterinar') ||
+                    roleLower.contains('hod') ||
+                    roleLower.contains('medical officer') ||
+                    roleLower.contains('medical hod'))) {
+              isDoc = true;
+              _authStorage.setIsDoctor(isDoc);
+            }
+          }
+        }
+      } catch (e) {
+        print('Failed to fetch profile during login: $e');
+      }
     }
 
     return response;
@@ -63,7 +114,7 @@ class AuthApiService {
         'email': email,
         'password': password,
         'role': role,
-        ?'phone': phone,
+        if (phone != null) 'phone': phone,
       },
     );
   }
@@ -95,12 +146,21 @@ class AuthApiService {
 
   /// Get the current user's profile.
   /// `GET /api/v1/auth/me`
-  Future<ApiResponse<dynamic>> getProfile() {
+  Future<ApiResponse<dynamic>> getProfile() async {
     final userId = _authStorage.userId ?? '';
-    return _client.get(
+    final response = await _client.get(
       ApiEndpoints.authMe,
       extraHeaders: {'X-User-ID': userId},
     );
+    
+    if (response.success && response.data is Map) {
+      final data = response.data as Map;
+      if (data['department_id'] != null) {
+        _authStorage.setDepartmentId(data['department_id'].toString());
+      }
+    }
+    
+    return response;
   }
 
   /// Logout — clears stored tokens.

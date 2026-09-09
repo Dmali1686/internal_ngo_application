@@ -1,8 +1,9 @@
-/// Simple in-memory auth token storage.
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Simple in-memory auth token storage with SharedPreferences persistence.
 ///
-/// Currently stores tokens in memory. Can be extended to use
-/// SharedPreferences or FlutterSecureStorage for persistence
-/// across app restarts.
+/// Stores tokens in memory for fast access, and backs them up
+/// to SharedPreferences for persistence across app restarts.
 class AuthStorageService {
   static final AuthStorageService _instance = AuthStorageService._internal();
 
@@ -13,6 +14,11 @@ class AuthStorageService {
   String? _accessToken;
   String? _refreshToken;
   String? _userId;
+  String? _departmentId;
+  String? _departmentName; // e.g. 'Food Department', 'Medical Department'
+  bool _isDoctor = false;
+  String? _role; // persisted role: 'Super Admin', 'Admin', 'Employee'
+  String? _positionTitle; // backend-returned position title e.g. 'Medical HOD'
 
   /// The current access token (JWT).
   String? get accessToken => _accessToken;
@@ -23,8 +29,64 @@ class AuthStorageService {
   /// The current user ID.
   String? get userId => _userId;
 
+  /// The current user's department ID.
+  String? get departmentId => _departmentId;
+
+  /// The current user's department name (e.g. 'Food Department').
+  String? get departmentName => _departmentName;
+
+  /// True if the currently logged in user is identified as a doctor.
+  bool get isDoctor => _isDoctor;
+
+  /// The persisted role: 'Super Admin', 'Admin', or 'Employee'.
+  String? get role => _role;
+
+  /// The backend-assigned position title (e.g. 'Medical HOD', 'Veterinarian').
+  String? get positionTitle => _positionTitle;
+
   /// Whether the user is currently authenticated.
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+
+  /// Initialize from SharedPreferences at app startup.
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _accessToken = prefs.getString('auth_access_token');
+    _refreshToken = prefs.getString('auth_refresh_token');
+    _userId = prefs.getString('auth_user_id');
+    _departmentId = prefs.getString('auth_department_id');
+    _departmentName = prefs.getString('auth_department_name');
+    _isDoctor = prefs.getBool('auth_is_doctor') ?? false;
+    _role = prefs.getString('auth_role'); // restore role on restart
+    _positionTitle = prefs.getString('auth_position_title'); // restore backend position
+  }
+
+  void setIsDoctor(bool val) {
+    _isDoctor = val;
+    _saveToPrefs();
+  }
+
+  /// Store the backend position title (e.g. 'Medical HOD') after login.
+  void setPositionTitle(String? title) {
+    _positionTitle = title;
+    _saveToPrefs();
+  }
+
+  void setDepartmentId(String id) {
+    _departmentId = id;
+    _saveToPrefs();
+  }
+
+  /// Store the department name after login (e.g. 'Food Department').
+  void setDepartmentName(String? name) {
+    _departmentName = name;
+    _saveToPrefs();
+  }
+
+  /// Persist the user role after successful login.
+  void saveRole(String role) {
+    _role = role;
+    _saveToPrefs();
+  }
 
   /// Store tokens after successful login or token refresh.
   void saveTokens({
@@ -37,11 +99,13 @@ class AuthStorageService {
     if (userId != null) {
       _userId = userId;
     }
+    _saveToPrefs();
   }
 
   /// Update only the access token (e.g., after a refresh).
   void updateAccessToken(String accessToken) {
     _accessToken = accessToken;
+    _saveToPrefs();
   }
 
   /// Clear all stored auth data (logout).
@@ -49,5 +113,60 @@ class AuthStorageService {
     _accessToken = null;
     _refreshToken = null;
     _userId = null;
+    _departmentId = null;
+    _departmentName = null;
+    _isDoctor = false;
+    _role = null;
+    _positionTitle = null;
+    _saveToPrefs();
+  }
+
+  /// Persist current state to SharedPreferences
+  Future<void> _saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (_accessToken != null) {
+      await prefs.setString('auth_access_token', _accessToken!);
+    } else {
+      await prefs.remove('auth_access_token');
+    }
+    
+    if (_refreshToken != null) {
+      await prefs.setString('auth_refresh_token', _refreshToken!);
+    } else {
+      await prefs.remove('auth_refresh_token');
+    }
+    
+    if (_userId != null) {
+      await prefs.setString('auth_user_id', _userId!);
+    } else {
+      await prefs.remove('auth_user_id');
+    }
+    
+    if (_departmentId != null) {
+      await prefs.setString('auth_department_id', _departmentId!);
+    } else {
+      await prefs.remove('auth_department_id');
+    }
+
+    if (_departmentName != null) {
+      await prefs.setString('auth_department_name', _departmentName!);
+    } else {
+      await prefs.remove('auth_department_name');
+    }
+
+    if (_role != null) {
+      await prefs.setString('auth_role', _role!);
+    } else {
+      await prefs.remove('auth_role');
+    }
+
+    if (_positionTitle != null) {
+      await prefs.setString('auth_position_title', _positionTitle!);
+    } else {
+      await prefs.remove('auth_position_title');
+    }
+    
+    await prefs.setBool('auth_is_doctor', _isDoctor);
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:provider/provider.dart';
+import '../../providers/registration_provider.dart';
 class Step6ReviewSubmit extends StatefulWidget {
   const Step6ReviewSubmit({super.key});
 
@@ -24,9 +25,7 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
           SizedBox(height: 16.h),
           _buildHeader(),
           SizedBox(height: 24.h),
-          _buildSummarySections(),
-          SizedBox(height: 24.h),
-          _buildTokenSection(),
+          _buildSummarySections(context),
           SizedBox(height: 24.h),
           _buildTermsAndSignature(),
           SizedBox(height: 120.h),
@@ -59,7 +58,9 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
     );
   }
 
-  Widget _buildSummarySections() {
+  Widget _buildSummarySections(BuildContext context) {
+    final provider = context.read<RegistrationProvider>();
+
     return Column(
       children: [
         _buildSummaryCard(
@@ -70,14 +71,20 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
             children: [
               Row(
                 children: [
-                  Expanded(child: _buildInfoItem('Full Name', 'Sarah Jenkins')),
                   Expanded(
-                    child: _buildInfoItem('Contact', '+1 (555) 123-4567'),
+                      child: _buildInfoItem(
+                          'Full Name', 
+                          provider.reporterNameController.text.isNotEmpty ? provider.reporterNameController.text : 'Unknown'
+                      )
+                  ),
+                  Expanded(
+                    child: _buildInfoItem(
+                        'Contact', 
+                        provider.mobileNumberController.text.isNotEmpty ? provider.mobileNumberController.text : 'Unknown'
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 12.h),
-              _buildInfoItem('Organization', 'Independent Volunteer'),
             ],
           ),
         ),
@@ -88,24 +95,14 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 100.h,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  image: const DecorationImage(
-                    image: NetworkImage(
-                      'https://images.unsplash.com/photo-1524661135-423995f22d0b',
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              SizedBox(height: 12.h),
               _buildInfoItem(
-                'Coordinates / Address',
-                '124 Maple Avenue, Springfield\n[40.7128° N, 74.0060° W]',
+                'Address',
+                provider.addressController.text.isNotEmpty ? provider.addressController.text : 'Unknown',
               ),
+              if (provider.landmarkController.text.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                _buildInfoItem('Landmark', provider.landmarkController.text),
+              ]
             ],
           ),
         ),
@@ -116,49 +113,69 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12.r),
-                child: Image.network(
-                  'https://images.unsplash.com/photo-1552053831-71594a27632d',
-                  width: 80.w,
-                  height: 80.w,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              SizedBox(width: 16.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoItem('Species / Breed', 'Canine • Labrador Mix'),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Traits',
-                      style: GoogleFonts.nunitoSans(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 1,
-                      ),
+                    _buildInfoItem(
+                        'Species / Breed', 
+                        '${provider.animalType} • ${provider.breedController.text.isNotEmpty ? provider.breedController.text : "Unknown"}'
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 8.h),
                     Row(
                       children: [
-                        _buildTraitChip(
-                          'Friendly',
-                          const Color(0xFFC2E8FF),
-                          const Color(0xFF004D67),
-                        ),
-                        SizedBox(width: 8.w),
-                        _buildTraitChip(
-                          'Hungry',
-                          const Color(0xFFFFDDB9),
-                          const Color(0xFF663E00),
-                        ),
+                        Expanded(child: _buildInfoItem('Gender', provider.gender)),
+                        Expanded(child: _buildInfoItem('Age', provider.age)),
                       ],
                     ),
+                    if (provider.symptomTags.isNotEmpty || provider.observations.isNotEmpty) ...[
+                      SizedBox(height: 12.h),
+                      Text(
+                        'OBSERVATIONS',
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: [
+                          ...provider.symptomTags.map((t) => _buildTraitChip(t, const Color(0xFFC2E8FF), const Color(0xFF004D67))),
+                          ...provider.observations.map((o) => _buildTraitChip(o, const Color(0xFFFFDDB9), const Color(0xFF663E00))),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 16.h),
+        _buildSummaryCard(
+          'Medical & Transport (Additional)',
+          Icons.local_hospital,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildInfoItem('Diagnosis', context.read<RegistrationProvider>().diagnosisController.text.isNotEmpty ? context.read<RegistrationProvider>().diagnosisController.text : 'Not provided')),
+                  Expanded(child: _buildInfoItem('Tests', context.read<RegistrationProvider>().testsController.text.isNotEmpty ? context.read<RegistrationProvider>().testsController.text : 'Not provided')),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildInfoItem('Cage Number', context.read<RegistrationProvider>().cageNumberController.text.isNotEmpty ? context.read<RegistrationProvider>().cageNumberController.text : 'Not provided')),
+                  Expanded(child: _buildInfoItem('Transporter Contact', context.read<RegistrationProvider>().transporterContactController.text.isNotEmpty ? context.read<RegistrationProvider>().transporterContactController.text : 'Not provided')),
+                ],
               ),
             ],
           ),
@@ -184,12 +201,14 @@ class _Step6ReviewSubmitState extends State<Step6ReviewSubmit> {
             children: [
               Icon(icon, color: const Color(0xFF006E1C), size: 24.w),
               SizedBox(width: 12.w),
-              Text(
-                title,
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1B1C1C),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.nunitoSans(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1B1C1C),
+                  ),
                 ),
               ),
             ],

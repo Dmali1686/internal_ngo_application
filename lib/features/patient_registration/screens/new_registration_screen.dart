@@ -115,65 +115,175 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
   Future<void> _submitRegistration() async {
     if (_isSubmitting) return;
 
+    final provider = context.read<RegistrationProvider>();
+
+    // Validate images before doing anything else
+    if (provider.frontImage == null || provider.sideImage == null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Photos Required'),
+          content: const Text(
+            'Please go back to Step 4 and add both the front and side photos of the animal.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
 
-    final provider = context.read<RegistrationProvider>();
+    // Map gender to API-expected format (MALE / FEMALE / UNKNOWN)
+    String apiGender;
+    final g = provider.gender.toUpperCase();
+    if (g == 'MALE' || g == 'FEMALE') {
+      apiGender = g;
+    } else {
+      apiGender = 'UNKNOWN';
+    }
+
+    // Build symptoms string from tags + free text
+    final symptomParts = <String>[
+      ...provider.symptomTags,
+      if (provider.symptomsController.text.isNotEmpty)
+        provider.symptomsController.text,
+      ...provider.observations,
+    ];
+
+    // Build full address from address + city
+    final addressParts = <String>[
+      if (provider.addressController.text.isNotEmpty)
+        provider.addressController.text,
+      if (provider.areaController.text.isNotEmpty)
+        provider.areaController.text,
+      if (provider.cityController.text.isNotEmpty)
+        provider.cityController.text,
+    ];
 
     final request = PatientRegistrationRequest(
-      animalTypeId: provider.animalTypeId ?? 1,
-      breedId: provider.breedId,
-      colorId: provider.colorId,
       animalName: provider.animalNameController.text.isNotEmpty
           ? provider.animalNameController.text
           : null,
-      age: provider.age != 'Unknown' ? provider.age : null,
+      animalType: provider.animalType.toUpperCase(),
+      age: provider.age != 'Unknown' ? provider.age : 'Unknown',
+      gender: apiGender,
+      color: provider.colorController.text.isNotEmpty
+          ? provider.colorController.text
+          : 'Unknown',
       weight: double.tryParse(provider.weightController.text),
-      gender: provider.gender != 'Unknown' ? provider.gender : null,
-      reporterName: provider.reporterNameController.text.isNotEmpty
-          ? provider.reporterNameController.text
-          : null,
-      reporterMobile: provider.mobileNumberController.text.isNotEmpty
-          ? provider.mobileNumberController.text
-          : null,
-      reporterType: 'Citizen',
-      address: provider.addressController.text.isNotEmpty
-          ? provider.addressController.text
-          : null,
+      temperature: double.tryParse(provider.temperatureController.text),
+      isSterilized: provider.isSterilized,
+      animalAddress: addressParts.isNotEmpty
+          ? addressParts.join(', ')
+          : 'Not provided',
       landmark: provider.landmarkController.text.isNotEmpty
           ? provider.landmarkController.text
           : null,
-      description: provider.symptomsController.text.isNotEmpty
-          ? provider.symptomsController.text
+      reporterName: provider.reporterNameController.text.isNotEmpty
+          ? provider.reporterNameController.text
+          : 'Unknown',
+      reporterMobile: provider.mobileNumberController.text.isNotEmpty
+          ? provider.mobileNumberController.text
+          : 'N/A',
+      symptoms: symptomParts.isNotEmpty ? symptomParts.join(', ') : null,
+      diagnosis: provider.diagnosisController.text.isNotEmpty
+          ? provider.diagnosisController.text
           : null,
-      transportType: 'Ambulance',
-      rescuePriority: provider.priority.toLowerCase(),
+      tests: provider.testsController.text.isNotEmpty
+          ? provider.testsController.text
+          : null,
+      transportedBy: 'Ambulance',
+      transporterContact: provider.transporterContactController.text.isNotEmpty
+          ? provider.transporterContactController.text
+          : null,
+      cageNumber: provider.cageNumberController.text.isNotEmpty
+          ? provider.cageNumberController.text
+          : null,
+      condition: provider.condition,
     );
 
-    final apiService = PatientApiService();
-    final response = await apiService.registerPatient(request: request);
-
-    if (!mounted) return;
-
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    if (response.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rescue Registration Successful!')),
+    try {
+      final apiService = PatientApiService();
+      final response = await apiService.registerPatient(
+        request: request,
+        frontImage: provider.frontImage!,
+        sideImage: provider.sideImage!,
       );
-      context.go('/registration-success');
-    } else {
+
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      if (response.success) {
+        // The API wraps the patient in response.data['data']
+        String? caseId;
+        String? patientId;
+        String? qrPayload;
+
+        dynamic dataObj = response.data;
+        if (dataObj is Map<String, dynamic>) {
+          // Try nested { success, data: {...} } wrapper first
+          final inner = dataObj['data'];
+          final src = (inner is Map<String, dynamic>) ? inner : dataObj;
+          caseId = src['case_id']?.toString();
+          patientId = src['id']?.toString();
+          qrPayload = src['qr_payload']?.toString();
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rescue Registration Successful!'),
+            backgroundColor: Color(0xFF006E1C),
+          ),
+        );
+        context.go(
+          '/registration-success',
+          extra: {
+            'case_id': caseId ?? 'N/A',
+            'patient_id': patientId,
+            'qr_payload': qrPayload,
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Registration Failed'),
+            content: Text(
+              response.errorMessage ??
+                  'An error occurred while registering the patient.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Registration Failed'),
-          content: Text(
-            response.errorMessage ??
-                'An error occurred while registering the patient.',
-          ),
+          content: Text('Error: ${e.toString()}'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -249,7 +359,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${_currentStep + 1} of 4',
+                'Step ${_currentStep + 1} of ${_steps.length}',
                 style: GoogleFonts.nunitoSans(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
@@ -284,7 +394,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                     ),
                   ),
                 ),
-                Expanded(flex: 4 - (_currentStep + 1), child: const SizedBox()),
+                Expanded(flex: _steps.length - (_currentStep + 1), child: const SizedBox()),
               ],
             ),
           ),
@@ -335,7 +445,7 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
           if (_currentStep > 0) SizedBox(width: 16.w),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentStep == 3
+              onPressed: _currentStep == _steps.length - 1
                   ? _isSubmitting
                         ? null
                         : _submitRegistration
@@ -361,14 +471,14 @@ class _NewRegistrationScreenState extends State<NewRegistrationScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _currentStep == 3 ? 'Submit Rescue' : 'Next Step',
+                          _currentStep == _steps.length - 1 ? 'Submit Rescue' : 'Next Step',
                           style: GoogleFonts.nunitoSans(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        if (_currentStep < 3) ...[
+                        if (_currentStep < _steps.length - 1) ...[
                           SizedBox(width: 8.w),
                           Icon(
                             Icons.arrow_forward,

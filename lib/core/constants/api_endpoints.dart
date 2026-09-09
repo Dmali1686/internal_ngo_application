@@ -14,6 +14,45 @@ class ApiEndpoints {
   static const String authRefresh = '/auth/refresh';
   static const String authMe = '/auth/me';
 
+  /// GET — list of dashboard modules allowed for the current user's role.
+  static const String myModules = '/auth/me/modules';
+
+  // ---------------------------------------------------------------------------
+  // Organization — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// GET — list all departments.
+  static const String departments = '/departments';
+
+  /// GET — list all positions (filter by dept via query param).
+  static const String positions = '/positions';
+
+  /// GET — list all access categories.
+  static const String accessCategories = '/access-categories';
+
+  // ---------------------------------------------------------------------------
+  // Users — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// POST — create a new user profile.
+  static const String createUser = '/users';
+
+  /// POST — add assignments (department/position/role) to a user.
+  static String userAssignments(String id) => '/users/$id/assignments';
+
+  // ---------------------------------------------------------------------------
+  // Admin — Super Admin only
+  // ---------------------------------------------------------------------------
+
+  /// GET — list all employees (optionally filtered by role query param).
+  static const String employees = '/employees';
+
+  /// PATCH — assign / update a role for a specific employee.
+  static String employeeRole(String id) => '/employees/$id/role';
+
+  /// GET — operational analytics (tasks, employee performance, role split).
+  static const String adminAnalytics = '/admin/analytics';
+
   // ---------------------------------------------------------------------------
   // Public Auth
   // ---------------------------------------------------------------------------
@@ -32,6 +71,9 @@ class ApiEndpoints {
 
   /// GET / PATCH — requires `{id}` substitution.
   static String patientDetail(String id) => '/patients/$id';
+
+  /// GET — patient by generated Case ID (e.g. MH14-2026-000001).
+  static String patientByCaseId(String caseId) => '/patients/case/$caseId';
 
   /// POST — cage allocation for a patient.
   static String patientCageAllocation(String id) =>
@@ -76,12 +118,41 @@ class ApiEndpoints {
   // Diet Management
   // ---------------------------------------------------------------------------
 
-  /// GET / POST — diets for a patient.
-  static String patientDiets(String patientId) => '/patients/$patientId/diets';
+  /// GET — full diet history for a patient (DEFAULT + ADDITIONAL).
+  static String patientDietHistory(String patientId) =>
+      '/patients/$patientId/diet/history';
 
-  /// PATCH — update a specific diet.
-  static String updateDiet(String patientId, String dietId) =>
-      '/patients/$patientId/diets/$dietId';
+  /// POST — add an additional diet to a patient without replacing existing.
+  static String patientDietAdditional(String patientId) =>
+      '/patients/$patientId/diet/additional';
+
+  /// GET / POST — admin: view and create default diet plan rules.
+  static const String defaultDietPlans = '/diet/default-plans';
+
+  // ---------------------------------------------------------------------------
+  // Food Department
+  // ---------------------------------------------------------------------------
+
+  /// GET — today's feeding schedule for food-dept staff.
+  static const String foodDeptScheduleToday = '/food-dept/schedule/today';
+
+  /// GET — feeding schedule for a specific date (YYYY-MM-DD).
+  static String foodDeptScheduleByDate(String date) =>
+      '/food-dept/schedule/$date';
+
+  /// PATCH — mark a feeding task as completed.
+  static String foodDeptCompleteTask(String taskId) =>
+      '/food-dept/tasks/$taskId/complete';
+
+  // ---------------------------------------------------------------------------
+  // Medicines
+  // ---------------------------------------------------------------------------
+
+  /// GET — paginated medicine master list (supports ?search=, ?page=, ?limit=).
+  static const String medicines = '/medicines';
+
+  /// GET — single medicine by ID.
+  static String medicineById(String id) => '/medicines/$id';
 
   // ---------------------------------------------------------------------------
   // Master Data
@@ -131,6 +202,18 @@ class ApiEndpoints {
   static const String rescueTrips = '/rescue-trips';
 
   static String rescueTripDetail(String id) => '/rescue-trips/$id';
+
+  // ---------------------------------------------------------------------------
+  // Notifications
+  // ---------------------------------------------------------------------------
+  static const String notificationsToken = '/notifications/token';
+  static const String notificationsInbox = '/notifications/inbox';
+
+  static String notificationsInboxMarkRead(String id) =>
+      '/notifications/inbox/$id/read';
+
+  static String notificationsInboxDelete(String id) =>
+      '/notifications/inbox/$id';
 
   // ---------------------------------------------------------------------------
   // Public Endpoints

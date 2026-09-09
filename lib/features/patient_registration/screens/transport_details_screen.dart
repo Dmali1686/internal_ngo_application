@@ -14,11 +14,22 @@ class TransportDetailsScreen extends StatefulWidget {
 class _TransportDetailsScreenState extends State<TransportDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
   String _transportMethod = 'Ambulance';
+  final _transporterContactController = TextEditingController();
+  final _cageNumberController = TextEditingController();
+
+  @override
+  void dispose() {
+    _transporterContactController.dispose();
+    _cageNumberController.dispose();
+    super.dispose();
+  }
 
   void _onNext() {
     if (_formKey.currentState!.validate()) {
       context.read<RegistrationProvider>().updateTransportDetails(
         method: _transportMethod,
+        contact: _transporterContactController.text,
+        cage: _cageNumberController.text,
       );
       context.push('/review-registration');
     }
@@ -68,6 +79,29 @@ class _TransportDetailsScreenState extends State<TransportDetailsScreen> {
               subtitle: 'A registered volunteer is handling transport',
               icon: Icons.volunteer_activism_outlined,
               value: 'Volunteer',
+            ),
+            SizedBox(height: 24.h),
+            TextFormField(
+              controller: _transporterContactController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Transporter Contact Number (Optional)',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            TextFormField(
+              controller: _cageNumberController,
+              decoration: InputDecoration(
+                labelText: 'Assign Cage Number (Optional)',
+                prefixIcon: const Icon(Icons.meeting_room_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
             ),
             SizedBox(height: 48.h),
             ElevatedButton(

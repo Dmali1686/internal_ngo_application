@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,10 +7,23 @@ import '../../providers/registration_provider.dart';
 import '../../services/registration_voice_assistant.dart';
 import '../../../../core/services/voice_service.dart';
 import '../../../../core/services/voice_language_provider.dart';
-import '../../../../core/providers/master_data_provider.dart';
+
 
 class Step3AnimalDetails extends StatelessWidget {
   const Step3AnimalDetails({super.key});
+
+  static const List<String> _animalTypes = [
+    'Dog',
+    'Cat',
+    'Bird',
+    'Cow',
+    'Buffalo',
+    'Horse',
+    'Donkey',
+    'Monkey',
+    'Snake',
+    'Other',
+  ];
 
   final List<String> _observations = const [
     'Conscious',
@@ -37,6 +51,8 @@ class Step3AnimalDetails extends StatelessWidget {
           _buildIdentificationHealth(context),
           SizedBox(height: 24.h),
           _buildStatusObservations(context),
+          SizedBox(height: 24.h),
+          _buildAdditionalInfo(context),
           SizedBox(height: 120.h),
         ],
       ),
@@ -162,7 +178,6 @@ class Step3AnimalDetails extends StatelessWidget {
   Widget _buildBasicInformation(BuildContext context) {
     final formProvider = context.watch<RegistrationProvider>();
     final voiceService = context.watch<VoiceService>();
-    final masterProvider = context.watch<MasterDataProvider>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,99 +236,48 @@ class Step3AnimalDetails extends StatelessWidget {
         Wrap(
           spacing: 8.w,
           runSpacing: 8.h,
-          children: masterProvider.animalTypes
-              .map((typeData) => _buildTypeChip(typeData, formProvider))
+          children: _animalTypes
+              .map((typeName) => _buildTypeChip(typeName, formProvider))
               .toList(),
         ),
         SizedBox(height: 16.h),
-        Text(
+        _buildTextField(
           'Breed / Mix',
-          style: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        SizedBox(height: 8.h),
-        DropdownMenu<int>(
-          initialSelection: formProvider.breedId,
-          controller: formProvider.breedController,
-          width:
-              MediaQuery.of(context).size.width -
-              40.w, // Match screen width minus padding
-          hintText: 'Search breed...',
-          textStyle: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: const Color(0xFF1B1C1C),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFFBF9F9),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.w,
-              vertical: 14.h,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          onSelected: (int? value) {
-            formProvider.updateBreedId(value);
-          },
-          dropdownMenuEntries: masterProvider.breeds.map((breed) {
-            return DropdownMenuEntry<int>(
-              value: breed['id'],
-              label: breed['name'] ?? 'Unknown',
-            );
-          }).toList(),
+          'e.g. Labrador, Persian, Mixed',
+          formProvider.breedController,
+          focusNode: formProvider.breedFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'breed',
         ),
         SizedBox(height: 16.h),
-        Text(
+        _buildTextField(
           'Color',
+          'e.g. Brown, Black, White, Mixed',
+          formProvider.colorController,
+          focusNode: formProvider.colorFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'color',
+        ),
+        SizedBox(height: 16.h),
+        // ── Condition selector (for diet rule matching) ─────────────────
+        Text(
+          'Condition',
           style: GoogleFonts.nunitoSans(
             fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
             color: Colors.grey.shade700,
           ),
         ),
-        SizedBox(height: 8.h),
-        DropdownMenu<int>(
-          initialSelection: formProvider.colorId,
-          width: MediaQuery.of(context).size.width - 40.w,
-          hintText: 'Search color...',
-          textStyle: GoogleFonts.nunitoSans(
-            fontSize: 14.sp,
-            color: const Color(0xFF1B1C1C),
+        SizedBox(height: 4.h),
+        Text(
+          'Used to automatically assign a diet plan',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 11.sp,
+            color: Colors.grey.shade500,
           ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFFBF9F9),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.w,
-              vertical: 14.h,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          onSelected: (int? value) {
-            formProvider.updateColorId(value);
-          },
-          dropdownMenuEntries: masterProvider.colors.map((color) {
-            return DropdownMenuEntry<int>(
-              value: color['id'],
-              label: color['name'] ?? 'Unknown',
-            );
-          }).toList(),
         ),
+        SizedBox(height: 8.h),
+        _buildConditionSelector(formProvider),
         SizedBox(height: 16.h),
         Text(
           'Gender',
@@ -409,21 +373,28 @@ class Step3AnimalDetails extends StatelessWidget {
             ),
           ],
         ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Temperature (°C)',
+          'e.g. 38.5',
+          formProvider.temperatureController,
+          focusNode: formProvider.temperatureFocus,
+          keyboardType: TextInputType.number,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'temperature',
+        ),
       ],
     );
   }
 
   Widget _buildTypeChip(
-    Map<String, dynamic> typeData,
+    String typeName,
     RegistrationProvider formProvider,
   ) {
-    String typeName = typeData['name'] ?? 'Unknown';
-    int typeId = typeData['id'] ?? 0;
-    bool isSelected = formProvider.animalTypeId == typeId;
+    bool isSelected = formProvider.animalType == typeName;
     return GestureDetector(
       onTap: () {
         formProvider.updateAnimalType(typeName);
-        formProvider.updateAnimalTypeId(typeId);
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -442,6 +413,64 @@ class Step3AnimalDetails extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildConditionSelector(RegistrationProvider formProvider) {
+    const conditions = [
+      ('NORMAL', Color(0xFF006E1C), Color(0xFFE8F5E9), Color(0xFF1B5E20)),
+      ('FEVER', Color(0xFFD98900), Color(0xFFFFF8E1), Color(0xFF7C4B00)),
+      ('INJURY', Color(0xFFBA1A1A), Color(0xFFFFEBEE), Color(0xFF7F0000)),
+    ];
+
+    return Row(
+      children: conditions.map((entry) {
+        final (label, borderColor, bgColor, textColor) = entry;
+        final isSelected = formProvider.condition == label;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => formProvider.updateCondition(label),
+            child: Container(
+              margin: EdgeInsets.only(
+                right: label != 'INJURY' ? 8.w : 0,
+              ),
+              padding: EdgeInsets.symmetric(vertical: 10.h),
+              decoration: BoxDecoration(
+                color: isSelected ? bgColor : Colors.white,
+                border: Border.all(
+                  color: isSelected ? borderColor : Colors.grey.shade300,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    label == 'NORMAL'
+                        ? Icons.check_circle_outline
+                        : label == 'FEVER'
+                            ? Icons.thermostat
+                            : Icons.healing,
+                    color: isSelected ? borderColor : Colors.grey.shade400,
+                    size: 20.w,
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    label,
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 11.sp,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? textColor : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -650,6 +679,56 @@ class Step3AnimalDetails extends StatelessWidget {
     );
   }
 
+  Widget _buildAdditionalInfo(BuildContext context) {
+    final formProvider = context.watch<RegistrationProvider>();
+    final voiceService = context.watch<VoiceService>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Additional Medical & Transport Info',
+          style: GoogleFonts.nunitoSans(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1B1C1C),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        _buildTextField(
+          'Required Tests (Optional)',
+          'e.g. Blood Test, X-Ray',
+          formProvider.testsController,
+          focusNode: formProvider.testsFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'tests',
+        ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Transporter Contact (Optional)',
+          'Enter driver/volunteer contact',
+          formProvider.transporterContactController,
+          focusNode: formProvider.transporterContactFocus,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'transporterContact',
+        ),
+        SizedBox(height: 16.h),
+        _buildTextField(
+          'Assign Cage Number (Optional)',
+          'e.g. C-142',
+          formProvider.cageNumberController,
+          focusNode: formProvider.cageNumberFocus,
+          readOnly: voiceService.isVoiceModeActive,
+          fieldKey: 'cageNumber',
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextField(
     String label,
     String hint,
@@ -659,6 +738,7 @@ class Step3AnimalDetails extends StatelessWidget {
     bool readOnly = false,
     IconData? icon,
     String? fieldKey,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Builder(
       builder: (context) {
@@ -722,6 +802,7 @@ class Step3AnimalDetails extends StatelessWidget {
                     controller: controller,
                     focusNode: focusNode,
                     keyboardType: keyboardType,
+                    inputFormatters: inputFormatters,
                     style: GoogleFonts.nunitoSans(
                       fontSize: 14.sp,
                       color: const Color(0xFF1B1C1C),

@@ -15,13 +15,15 @@ class MedicalAssessmentScreen extends StatefulWidget {
 class _MedicalAssessmentScreenState extends State<MedicalAssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _conditionController = TextEditingController();
-  final _injuriesController = TextEditingController();
+  final _diagnosisController = TextEditingController();
+  final _testsController = TextEditingController();
   String _urgencyLevel = 'Normal';
 
   @override
   void dispose() {
     _conditionController.dispose();
-    _injuriesController.dispose();
+    _diagnosisController.dispose();
+    _testsController.dispose();
     super.dispose();
   }
 
@@ -29,7 +31,8 @@ class _MedicalAssessmentScreenState extends State<MedicalAssessmentScreen> {
     if (_formKey.currentState!.validate()) {
       context.read<RegistrationProvider>().updateMedicalAssessment(
         condition: _conditionController.text,
-        injuries: _injuriesController.text,
+        diagnosis: _diagnosisController.text,
+        tests: _testsController.text,
         urgency: _urgencyLevel,
       );
       context.push('/transport-details');
@@ -70,10 +73,17 @@ class _MedicalAssessmentScreenState extends State<MedicalAssessmentScreen> {
             ),
             SizedBox(height: 20.h),
             _buildTextField(
-              controller: _injuriesController,
-              label: 'Visible Injuries',
+              controller: _diagnosisController,
+              label: 'Diagnosis (Optional)',
               icon: Icons.healing_outlined,
               maxLines: 3,
+            ),
+            SizedBox(height: 20.h),
+            _buildTextField(
+              controller: _testsController,
+              label: 'Required Tests (Optional)',
+              icon: Icons.science_outlined,
+              maxLines: 2,
             ),
             SizedBox(height: 20.h),
             Text(

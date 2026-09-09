@@ -56,4 +56,19 @@ class TreatmentApiService {
       body: updates,
     );
   }
+
+  /// Fetches the patient details by case ID from the QR code.
+  /// `GET /api/v1/patients/case/{case_id}`
+  Future<ApiResponse<dynamic>> getPatientByCaseId(String caseId) async {
+    return _client.get('/patients/case/$caseId');
+  }
+
+  /// Submits the treatment for the given patient ID.
+  /// `POST /api/v1/patients/{patient_id}/treatments`
+  Future<ApiResponse<dynamic>> submitTreatment(String patientId, Map<String, dynamic> requestData) async {
+    return _client.post(
+      '/patients/$patientId/treatments',
+      body: requestData,
+    );
+  }
 }

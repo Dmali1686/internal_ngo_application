@@ -7,8 +7,18 @@ class TreatmentDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard-transition');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Treatment Cycle'),
         elevation: 0,
@@ -67,7 +77,7 @@ class TreatmentDashboardScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white),
         ),
       ),
-    );
+    ),);
   }
 
   Widget _buildStatCard(String title, String count, MaterialColor color) {

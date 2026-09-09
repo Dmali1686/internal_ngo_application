@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../notifications/providers/notification_provider.dart';
+import '../../notifications/screens/notification_center_screen.dart';
 
 class HomeHeader extends StatelessWidget {
   final VoidCallback onProfileTap;
@@ -10,6 +13,8 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -43,29 +48,39 @@ class HomeHeader extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Stack(
-                        children: [
-                          Icon(Icons.notifications_none, size: 28.w),
-                          Positioned(
-                            right: 2.w,
-                            top: 2.h,
-                            child: Container(
-                              padding: EdgeInsets.all(3.w),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '5',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8.sp,
-                                  fontWeight: FontWeight.bold,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationCenterScreen(),
+                            ),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            Icon(Icons.notifications_none, size: 28.w),
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(3.w),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    unreadCount > 9 ? '9+' : '$unreadCount',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       SizedBox(width: 15.w),
                       GestureDetector(

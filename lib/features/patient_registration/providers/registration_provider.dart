@@ -14,8 +14,11 @@ class RegistrationProvider extends ChangeNotifier {
   final TextEditingController alternateNumberController =
       TextEditingController();
   final FocusNode alternateNumberFocus = FocusNode();
-  List<XFile> reporterPhotos = [];
   bool isEmergency = false;
+
+  // Animal photos — required by the backend
+  XFile? frontImage; // front-facing photo of the animal
+  XFile? sideImage;  // side-facing photo of the animal
 
   // Step 2: Location
   final TextEditingController addressController = TextEditingController();
@@ -42,6 +45,8 @@ class RegistrationProvider extends ChangeNotifier {
   final FocusNode breedFocus = FocusNode();
   int? breedId;
   int? colorId;
+  final TextEditingController colorController = TextEditingController();
+  final FocusNode colorFocus = FocusNode();
   String gender = 'Unknown';
   String age = 'Unknown';
   final TextEditingController weightController = TextEditingController();
@@ -50,6 +55,9 @@ class RegistrationProvider extends ChangeNotifier {
   bool isSterilized = false;
   bool hasCollar = false;
   Set<String> observations = {};
+
+  // Condition for diet rule matching (NORMAL | FEVER | INJURY)
+  String condition = 'NORMAL';
 
   // Step 5: Medical Assessment
   final TextEditingController symptomsController = TextEditingController();
@@ -60,6 +68,11 @@ class RegistrationProvider extends ChangeNotifier {
   final TextEditingController initialTreatmentController =
       TextEditingController();
   final FocusNode initialTreatmentFocus = FocusNode();
+  
+  final TextEditingController diagnosisController = TextEditingController();
+  final FocusNode diagnosisFocus = FocusNode();
+  final TextEditingController testsController = TextEditingController();
+  final FocusNode testsFocus = FocusNode();
   final TextEditingController medicineStartedController =
       TextEditingController();
   Map<String, bool> requiredTests = {
@@ -70,21 +83,26 @@ class RegistrationProvider extends ChangeNotifier {
   };
   String wardAssignment = '';
 
+  // Step 6: Transport Details (Extras)
+  final TextEditingController transporterContactController = TextEditingController();
+  final FocusNode transporterContactFocus = FocusNode();
+  final TextEditingController cageNumberController = TextEditingController();
+  final FocusNode cageNumberFocus = FocusNode();
+
   // Helpers to update state variables and notify listeners
   void setActiveVoiceField(String? val) {
     _activeVoiceField = val;
     notifyListeners();
   }
 
-  void addReporterPhoto(XFile photo) {
-    if (reporterPhotos.length < 4) {
-      reporterPhotos.add(photo);
-      notifyListeners();
-    }
+
+  void setFrontImage(XFile? file) {
+    frontImage = file;
+    notifyListeners();
   }
 
-  void removeReporterPhoto(int index) {
-    reporterPhotos.removeAt(index);
+  void setSideImage(XFile? file) {
+    sideImage = file;
     notifyListeners();
   }
 
@@ -161,6 +179,11 @@ class RegistrationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCondition(String val) {
+    condition = val;
+    notifyListeners();
+  }
+
   void updateRequiredTest(String test, bool val) {
     requiredTests[test] = val;
     notifyListeners();
@@ -225,18 +248,30 @@ class RegistrationProvider extends ChangeNotifier {
 
   void updateMedicalAssessment({
     required String condition,
-    required String injuries,
+    required String diagnosis,
+    required String tests,
     required String urgency,
   }) {
     _data['condition'] = condition;
-    _data['injuries'] = injuries;
+    _data['diagnosis'] = diagnosis;
+    _data['tests'] = tests;
     _data['urgency'] = urgency;
     symptomsController.text = condition;
+    diagnosisController.text = diagnosis;
+    testsController.text = tests;
     notifyListeners();
   }
 
-  void updateTransportDetails({required String method}) {
+  void updateTransportDetails({
+    required String method,
+    String? contact,
+    String? cage,
+  }) {
     _data['transportMethod'] = method;
+    _data['transporterContact'] = contact;
+    _data['cageNumber'] = cage;
+    if (contact != null) transporterContactController.text = contact;
+    if (cage != null) cageNumberController.text = cage;
     notifyListeners();
   }
 
@@ -253,13 +288,21 @@ class RegistrationProvider extends ChangeNotifier {
     animalNameController.clear();
     breedController.clear();
     weightController.clear();
+    colorController.clear();
     microchipController.clear();
     symptomsController.clear();
+    diagnosisController.clear();
+    testsController.clear();
     temperatureController.clear();
     initialTreatmentController.clear();
     medicineStartedController.clear();
-    reporterPhotos.clear();
+    transporterContactController.clear();
+    cageNumberController.clear();
+
+    frontImage = null;
+    sideImage = null;
     priority = 'Normal';
+    condition = 'NORMAL';
     mapLocation = null;
     animalType = 'Dog';
     animalTypeId = null;
@@ -302,15 +345,26 @@ class RegistrationProvider extends ChangeNotifier {
     animalNameController.dispose();
     breedController.dispose();
     breedFocus.dispose();
+    colorController.dispose();
+    colorFocus.dispose();
     weightController.dispose();
     weightFocus.dispose();
     microchipController.dispose();
     symptomsController.dispose();
     symptomsFocus.dispose();
+    diagnosisController.dispose();
+    diagnosisFocus.dispose();
+    testsController.dispose();
+    testsFocus.dispose();
     temperatureController.dispose();
     temperatureFocus.dispose();
     initialTreatmentController.dispose();
     initialTreatmentFocus.dispose();
+    medicineStartedController.dispose();
+    transporterContactController.dispose();
+    transporterContactFocus.dispose();
+    cageNumberController.dispose();
+    cageNumberFocus.dispose();
     medicineStartedController.dispose();
     super.dispose();
   }

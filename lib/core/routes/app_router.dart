@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/logger.dart';
+import '../../features/admin/screens/role_management_screen.dart';
+import '../../features/admin/screens/admin_analytics_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -15,6 +17,7 @@ import '../../features/patient_registration/screens/transport_details_screen.dar
 import '../../features/patient_registration/screens/review_registration_screen.dart';
 import '../../features/patient_registration/screens/registration_success_screen.dart';
 import '../../features/patient_registration/screens/edit_patient_screen.dart';
+import '../../features/patient_registration/screens/all_patients_screen.dart';
 import '../../features/qr_management/screens/qr_scanner_screen.dart';
 import '../../features/qr_management/screens/generate_qr_screen.dart';
 import '../../features/qr_management/screens/print_qr_screen.dart';
@@ -37,6 +40,7 @@ import '../../features/diet_management/screens/assign_diet_screen.dart';
 import '../../features/diet_management/screens/diet_details_screen.dart';
 import '../../features/diet_management/screens/todays_feeding_screen.dart';
 import '../../features/diet_management/screens/diet_history_screen.dart';
+import '../../features/diet_management/screens/default_diet_plans_screen.dart';
 import '../../features/ambulance/screens/ambulance_dashboard_screen.dart';
 import '../../features/ambulance/screens/emergency_requests_screen.dart';
 import '../../features/ambulance/screens/request_details_screen.dart';
@@ -58,6 +62,19 @@ import '../../features/doctor_panel/screens/doctor_panel_screen.dart';
 import '../../features/doctor_panel/screens/doctor_medical_orders_screen.dart';
 import '../../features/doctor_panel/screens/doctor_food_schedule_screen.dart';
 import '../../features/doctor_panel/screens/doctor_cleaning_schedule_screen.dart';
+import '../../features/super_admin/screens/super_admin_dashboard_screen.dart';
+import '../../features/super_admin/screens/department_detail_screen.dart';
+import '../../features/super_admin/screens/super_admin_employee_profile_screen.dart';
+import '../../features/super_admin/models/super_admin_models.dart';
+import '../../features/public_posting/screens/compose_public_post_screen.dart';
+import '../../features/public_posting/providers/compose_post_provider.dart';
+import '../../features/medicines/screens/medicines_list_screen.dart';
+import '../../features/medicines/screens/add_edit_medicine_screen.dart';
+import '../../features/medicines/models/medicine_model.dart';
+import '../../features/treatment/screens/qr_scanner_screen.dart' as treatment_qr;
+import '../../features/food_dept/screens/food_dept_task_screen.dart';
+import 'package:provider/provider.dart';
+import '../../features/notifications/screens/notification_center_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -121,6 +138,10 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/all-patients',
+      builder: (context, state) => const AllPatientsScreen(),
+    ),
+    GoRoute(
       path: '/qr-scanner',
       builder: (context, state) => const QrScannerScreen(),
     ),
@@ -138,7 +159,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/patient-detail',
-      builder: (context, state) => const PatientDetailScreen(),
+      builder: (context, state) {
+        final patient = state.extra as Map<String, dynamic>? ?? {};
+        return PatientDetailScreen(patient: patient);
+      },
     ),
     GoRoute(
       path: '/animal-overview',
@@ -195,7 +219,13 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/assign-diet',
-      builder: (context, state) => const AssignDietScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return AssignDietScreen(
+          patientId: extra['patientId'] as String? ?? '',
+          patientName: extra['patientName'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: '/diet-details',
@@ -207,7 +237,18 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/diet-history',
-      builder: (context, state) => const DietHistoryScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return DietHistoryScreen(
+          patientId: extra['patientId'] as String? ?? '',
+          patientName: extra['patientName'] as String?,
+          animalType: extra['animalType'] as String?,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/default-diet-plans',
+      builder: (context, state) => const DefaultDietPlansScreen(),
     ),
     GoRoute(
       path: '/cleaning-dashboard',
@@ -215,15 +256,50 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/doctor-panel',
-      builder: (context, state) => const DoctorPanelScreen(),
+      builder: (context, state) {
+        final Map<String, dynamic>? patientData = state.extra as Map<String, dynamic>?;
+        return DoctorPanelScreen(patientData: patientData);
+      },
     ),
     GoRoute(
       path: '/doctor-medical-orders',
       builder: (context, state) => const DoctorMedicalOrdersScreen(),
     ),
     GoRoute(
+      path: '/medical-orders/:caseId',
+      builder: (context, state) {
+        final caseId = state.pathParameters['caseId'];
+        return DoctorMedicalOrdersScreen(caseId: caseId);
+      },
+    ),
+    GoRoute(
+      path: '/treatment-qr-scanner',
+      builder: (context, state) => const treatment_qr.QRScannerScreen(),
+    ),
+    GoRoute(
+      path: '/medicines',
+      builder: (context, state) => const MedicinesListScreen(),
+    ),
+    GoRoute(
+      path: '/add-medicine',
+      builder: (context, state) => const AddEditMedicineScreen(),
+    ),
+    GoRoute(
+      path: '/edit-medicine/:id',
+      builder: (context, state) {
+        final medicine = state.extra as MedicineModel?;
+        return AddEditMedicineScreen(medicine: medicine);
+      },
+    ),
+    GoRoute(
       path: '/doctor-food-schedule',
-      builder: (context, state) => const DoctorFoodScheduleScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return DoctorFoodScheduleScreen(
+          patientId: extra?['patientId'] as String?,
+          patientName: extra?['patientName'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: '/doctor-cleaning-schedule',
@@ -289,6 +365,53 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/voice-notes-history',
       builder: (context, state) => const VoiceNotesHistoryScreen(),
+    ),
+    // ── Super Admin routes ────────────────────────────────────────────────────
+    GoRoute(
+      path: '/role-management',
+      builder: (context, state) => const RoleManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin-analytics',
+      builder: (context, state) => const AdminAnalyticsScreen(),
+    ),
+    GoRoute(
+      path: '/super-admin-dashboard',
+      builder: (context, state) => const SuperAdminDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/department-detail',
+      builder: (context, state) {
+        final dept = state.extra as DepartmentModel;
+        return DepartmentDetailScreen(department: dept);
+      },
+    ),
+    GoRoute(
+      path: '/super-admin-employee-profile',
+      builder: (context, state) {
+        final employee = state.extra as DepartmentEmployeeModel;
+        return SuperAdminEmployeeProfileScreen(employee: employee);
+      },
+    ),
+    // ── Public Posting routes ───────────────────────────────────────────────
+    GoRoute(
+      path: '/share-to-public',
+      builder: (context, state) {
+        return ChangeNotifierProvider(
+          create: (_) => ComposePostProvider(),
+          child: const ComposePublicPostScreen(),
+        );
+      },
+    ),
+    // ── Notifications route ──────────────────────────────────────────────────
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationCenterScreen(),
+    ),
+    // ── Food Department routes ──────────────────────────────────────────────
+    GoRoute(
+      path: '/food-dept-tasks',
+      builder: (context, state) => const FoodDeptTaskScreen(),
     ),
   ],
 );

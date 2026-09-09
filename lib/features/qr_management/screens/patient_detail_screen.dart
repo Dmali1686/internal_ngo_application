@@ -3,9 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_storage_service.dart';
+import '../../../core/utils/logger.dart';
+import '../../patient_registration/services/patient_api_service.dart';
 
 class PatientDetailScreen extends StatefulWidget {
-  const PatientDetailScreen({super.key});
+  final Map<String, dynamic> patient;
+  const PatientDetailScreen({super.key, this.patient = const {}});
 
   @override
   State<PatientDetailScreen> createState() => _PatientDetailScreenState();
@@ -17,9 +21,37 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  Map<String, dynamic> _patientData = {};
+  bool _isLoading = false;
+  final PatientApiService _apiService = PatientApiService();
+
+  /// Returns true if the current user's role should see the Doctor Panel.
+  /// Covers: Doctor (isDoctor flag), Admin, Super Admin, Medical HOD.
+  bool get _canAccessDoctorPanel {
+    final auth = AuthStorageService();
+    // Doctor flag (set from name or backend role auto-detection)
+    if (auth.isDoctor) return true;
+    // Login-selected role check (Admin / Super Admin)
+    final loginRole = auth.role?.toLowerCase() ?? '';
+    if (loginRole == 'admin' ||
+        loginRole == 'super admin' ||
+        loginRole == 'superadmin') return true;
+    // Backend position title check — covers Medical HOD, Veterinarian etc.
+    // (set from /auth/me profile after login, covers employees with privileged positions)
+    final position = auth.positionTitle?.toLowerCase() ?? '';
+    return position.contains('hod') ||
+        position.contains('medical') ||
+        position.contains('doctor') ||
+        position.contains('dr.') ||
+        position.contains('veterinar') ||
+        position.contains('admin') ||
+        position.contains('head of department');
+  }
+
   @override
   void initState() {
     super.initState();
+    _patientData = Map.from(widget.patient);
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -36,6 +68,42 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           ),
         );
     _animationController.forward();
+    _fetchPatientDetails();
+  }
+
+  Future<void> _fetchPatientDetails() async {
+    // Safely extract patient UUID — may be stored as 'id' or 'patient_id'
+    final rawId = _patientData['id'] ?? _patientData['patient_id'];
+    final patientId = rawId?.toString().trim() ?? '';
+    if (patientId.isEmpty) {
+      AppLogger.error('PatientDetailScreen', 'No patient ID found in patientData: $_patientData');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiService.getPatientById(patientId);
+      if (response.success && response.data != null) {
+        print('========== PATIENT DETAILS RESPONSE FROM BACKEND ==========');
+        print(response.data);
+        print('=========================================================');
+        // Backend may wrap data in a 'data' key
+        final raw = response.data;
+        final Map<String, dynamic> fetched =
+            (raw is Map<String, dynamic> && raw.containsKey('data') && raw['data'] is Map<String, dynamic>)
+                ? raw['data'] as Map<String, dynamic>
+                : (raw is Map<String, dynamic> ? raw : _patientData);
+        setState(() {
+          _patientData = fetched;
+        });
+      }
+    } catch (e) {
+      AppLogger.error('PatientDetailScreen', 'Error fetching patient: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -126,7 +194,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          'Bella',
+                                          _patientData['animal_name']?.isNotEmpty == true 
+                                              ? _patientData['animal_name'] 
+                                              : (_patientData['animal_type'] ?? 'Unknown'),
                                           style: GoogleFonts.poppins(
                                             fontSize: 26.sp,
                                             fontWeight: FontWeight.w700,
@@ -134,6 +204,18 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                           ),
                                         ),
                                       ),
+                                      if (_isLoading)
+                                        Padding(
+                                          padding: EdgeInsets.only(left: 10.w),
+                                          child: SizedBox(
+                                            width: 16.w,
+                                            height: 16.w,
+                                            child: const CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
                                       SizedBox(width: 10.w),
                                       Container(
                                         padding: EdgeInsets.symmetric(
@@ -159,7 +241,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                             ),
                                             SizedBox(width: 4.w),
                                             Text(
-                                              'Recovery',
+                                              (_patientData['status']?.toString().toUpperCase() ?? 'ADMITTED'),
                                               style: GoogleFonts.nunitoSans(
                                                 fontSize: 11.sp,
                                                 fontWeight: FontWeight.w700,
@@ -173,7 +255,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                                   ),
                                   SizedBox(height: 4.h),
                                   Text(
-                                    'Golden Retriever  •  Female  •  2 Yrs',
+                                    '${_patientData['animal_type'] ?? 'Unknown Type'}  •  ${_patientData['gender'] ?? 'Unknown'}  •  ${_patientData['age'] ?? 'Unknown Age'}',
                                     style: GoogleFonts.nunitoSans(
                                       fontSize: 13.sp,
                                       color: Colors.white.withOpacity(0.85),
@@ -190,11 +272,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         // Quick info chips
                         Row(
                           children: [
-                            _buildChip(Icons.tag, '#PT-2938'),
+                            _buildChip(Icons.tag, _patientData['case_id']?.toString() ?? 'No Case ID'),
                             SizedBox(width: 10.w),
-                            _buildChip(Icons.meeting_room, 'Cage 04, Ward A'),
+                            _buildChip(Icons.meeting_room, _patientData['cage_number']?.toString() ?? 'Unassigned'),
                             SizedBox(width: 10.w),
-                            _buildChip(Icons.calendar_today, 'Day 3'),
+                            _buildChip(Icons.calendar_today, _getDaysAdmitted(_patientData['admission_date'])),
                           ],
                         ),
                       ],
@@ -220,10 +302,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       _buildStatusBanner(),
                       SizedBox(height: 16.h),
 
-                      // Doctor Panel Button
-                      InkWell(
-                        onTap: () => context.push('/doctor-panel'),
-                        borderRadius: BorderRadius.circular(14.r),
+                      // Doctor Panel Button - Visible for Doctors, Admins, Super Admins & Medical HOD
+                      if (_canAccessDoctorPanel) ...[
+                        InkWell(
+                          onTap: () => context.push('/doctor-panel', extra: _patientData),
+                          borderRadius: BorderRadius.circular(14.r),
                         child: Container(
                           padding: EdgeInsets.all(16.w),
                           decoration: BoxDecoration(
@@ -289,6 +372,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                           ),
                         ),
                       ),
+                      ],
                       SizedBox(height: 24.h),
 
                       // Section Title
@@ -333,20 +417,20 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         time: 'Today, 08:00 AM',
                         badge: 'On Schedule',
                         badgeColor: const Color(0xFF34A853),
-                        onTap: () => context.push('/diet-dashboard'),
-                      ),
-                      SizedBox(height: 12.h),
-
-                      _buildModuleCard(
-                        icon: Icons.cleaning_services_outlined,
-                        title: 'Cleaning Updates',
-                        subtitle: 'Cage hygiene, grooming & sanitation',
-                        color: const Color(0xFF14B8A6),
-                        latestUpdate: 'Cage cleaned & disinfected',
-                        time: 'Today, 07:15 AM',
-                        badge: 'Done',
-                        badgeColor: const Color(0xFF34A853),
-                        onTap: () => context.push('/cleaning-dashboard'),
+                        onTap: () {
+                          final patientId = _patientData['id']?.toString() ?? _patientData['patient_id']?.toString() ?? '';
+                          final patientName = _patientData['animal_name']?.toString();
+                          final animalType = _patientData['animal_type']?.toString();
+                          
+                          context.push(
+                            '/diet-history',
+                            extra: {
+                              'patientId': patientId,
+                              'patientName': patientName,
+                              'animalType': animalType,
+                            },
+                          );
+                        },
                       ),
                       SizedBox(height: 12.h),
 
@@ -359,7 +443,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         time: 'Yesterday, 14:00 PM',
                         badge: '5 Records',
                         badgeColor: const Color(0xFF8B5CF6),
-                        onTap: () => context.push('/animal-overview'),
+                        onTap: () => context.push(
+                          '/animal-overview',
+                          extra: Map<String, dynamic>.from(_patientData),
+                        ),
                       ),
                       SizedBox(height: 24.h),
 
@@ -434,6 +521,17 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   // ──────────────────────────── Widgets ────────────────────────────
+
+  String _getDaysAdmitted(String? admissionDate) {
+    if (admissionDate == null || admissionDate.isEmpty) return 'Day 1';
+    try {
+      final date = DateTime.parse(admissionDate);
+      final difference = DateTime.now().difference(date).inDays;
+      return 'Day ${difference + 1}';
+    } catch (e) {
+      return 'Day 1';
+    }
+  }
 
   Widget _buildChip(IconData icon, String label) {
     return Expanded(

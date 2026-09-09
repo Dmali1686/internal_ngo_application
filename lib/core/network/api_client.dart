@@ -50,6 +50,16 @@ class ApiClient {
     return _send('POST', uri, body: body, extraHeaders: extraHeaders);
   }
 
+  /// Sends a PUT request with an optional JSON [body].
+  Future<ApiResponse<dynamic>> put(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    Map<String, String>? extraHeaders,
+  }) async {
+    final uri = _buildUri(endpoint);
+    return _send('PUT', uri, body: body, extraHeaders: extraHeaders);
+  }
+
   /// Sends a PATCH request with an optional JSON [body].
   Future<ApiResponse<dynamic>> patch(
     String endpoint, {
@@ -103,6 +113,45 @@ class ApiClient {
     }
   }
 
+  /// Sends a multipart/form-data POST with multiple named file fields and
+  /// arbitrary text form fields. Use this instead of [uploadFile] when you
+  /// need to attach more than one file (e.g. front_image + side_image).
+  Future<ApiResponse<dynamic>> postMultipart(
+    String endpoint, {
+    required Map<String, String> fields,
+    required List<MultipartFileInput> files,
+    Map<String, String>? extraHeaders,
+  }) async {
+    final uri = _buildUri(endpoint);
+    AppLogger.info('ApiClient', '📤 MULTIPART POST $uri');
+    AppLogger.info('ApiClient', '  Fields: ${fields.keys.toList()}');
+    AppLogger.info('ApiClient', '  Files: ${files.map((f) => "${f.field}=${f.path}").toList()}');
+
+    try {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(_mergedHeaders(extraHeaders))
+        ..fields.addAll(fields);
+
+      for (final f in files) {
+        request.files.add(
+          await http.MultipartFile.fromPath(f.field, f.path),
+        );
+      }
+
+      final streamedResponse = await request.send().timeout(
+        Duration(seconds: ApiConfig.receiveTimeoutSeconds * 2), // extra for image upload
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Multipart upload failed: $e');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------
@@ -127,7 +176,11 @@ class ApiClient {
     // Attach Bearer token if available.
     final token = AuthStorageService().accessToken;
     if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
+      if (token.startsWith('Bearer ')) {
+        headers['Authorization'] = token;
+      } else {
+        headers['Authorization'] = 'Bearer $token';
+      }
     }
 
     if (extraHeaders != null) {
@@ -169,6 +222,11 @@ class ApiClient {
         case 'PATCH':
           response = await _httpClient
               .patch(uri, headers: headers, body: encodedBody)
+              .timeout(timeout);
+          break;
+        case 'PUT':
+          response = await _httpClient
+              .put(uri, headers: headers, body: encodedBody)
               .timeout(timeout);
           break;
         case 'DELETE':
@@ -233,4 +291,16 @@ class ApiClient {
         throw ApiException(errorMsg, statusCode: response.statusCode);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helper used by ApiClient.postMultipart()
+// ---------------------------------------------------------------------------
+
+/// Represents a single named file field in a multipart request.
+class MultipartFileInput {
+  final String field; // form field name (e.g. 'front_image')
+  final String path;  // absolute path to the file on disk
+
+  const MultipartFileInput({required this.field, required this.path});
 }
